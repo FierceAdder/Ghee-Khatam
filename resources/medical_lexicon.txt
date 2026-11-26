@@ -133,3 +133,63 @@ dispensary sanstha chikitsalaya aushadhalaya in-house inhouse
 # clinical abbreviations written in capitals in notes and histories
 htn dm dm2 tb att copd cad ihd ckd aki rta lscs nsaid ors sos tds hs prn ecg usg cbc lft kft
 rbs fbs ppbs hba1c icu hdu opd ipd ot ent obg ncd uti urti lrti af mi cva tia gerd bph
+
+# laboratory tests, as in LOINC short names and common Indian report headings
+haemogram hemogram haemotology haematology hematology haematocrit hematocrit packed
+erythrocyte erythrocytes leucocyte leucocytes leukocyte leukocytes neutrophil neutrophils
+lymphocyte lymphocytes eosinophil eosinophils monocyte monocytes basophil basophils
+reticulocyte reticulocytes platelets thrombocyte thrombocytes granulocyte granulocytes
+corpuscular volume concentration distribution differential absolute indices morphology
+microcytic macrocytic normocytic hypochromic normochromic anisocytosis poikilocytosis
+mcv mch mchc rdw mpv pdw pcv plateletcrit tlc dlc anc aec alc esr crp hscrp
+procalcitonin interleukin ferritin transferrin saturation tibc uibc iron reticulin
+prothrombin thrombin thromboplastin fibrinogen fibrin dimer coagulation clotting aptt
+inr ptinr troponin myoglobin natriuretic peptide probnp ntprobnp ckmb creatine kinase
+transaminase aminotransferase alanine aspartate phosphatase alkaline gamma glutamyl
+transferase sgot sgpt alt ast alp ggt ggtp ldh amylase lipase albumin globulin protein
+proteins conjugated unconjugated indirect direct ratio clearance egfr gfr creat bun uric
+electrolyte electrolytes phosphorus phosphate ionised ionized anion gap osmolality
+lipid lipids profile cholesterol triglyceride triglycerides lipoprotein hdl ldl vldl
+apolipoprotein homocysteine glycated glycosylated glycohaemoglobin glycohemoglobin
+fructosamine microalbumin albuminuria proteinuria ketone ketones insulin peptide ogtt
+thyrotropin triiodothyronine tetraiodothyronine ft3 ft4 t3 t4 tpo cortisol prolactin
+testosterone estradiol oestradiol progesterone gonadotropin beta hcg lh fsh amh pth
+parathyroid vitamin b12 d3 folate psa cea afp ca125 ca19 marker markers tumour
+hbsag hcv hav hev hbv anti antibodies antigens reactive nonreactive vdrl rpr tpha widal
+typhidot ns1 igg igm iga ige elisa clia eclia pcr rtpcr naat cbnaat genexpert xpert
+truenat mantoux igra afb zn ziehl neelsen giemsa stain staining microscopy microscopic
+koh mount wet smears sputum swab aspirate effusion csf pleural synovial ascitic fluid
+gene mtb rifampicin resistance detected undetected indeterminate rapid kit rdt card
+urinalysis urobilinogen nitrite casts crystals epithelial pus occult ova cyst parasite
+specific gravity reaction appearance colour color turbidity deposit sediment routine
+specimen sample serum plasma whole venous arterial capillary fasting postprandial
+haemoglobin hemoglobin glucose sugar creatinine urea bilirubin sodium potassium calcium
+magnesium chloride bicarbonate lactate ammonia ceruloplasmin complement rheumatoid
+factor ana anca dsdna ccp antinuclear grouping crossmatch coombs electrophoresis
+culture sensitivity colony isolate resistant sensitive histopathology cytology fnac
+mammography doppler angiogram spirometry audiometry tonometry fundoscopy holter treadmill
+tmt eeg emg ncv pft usg mri hrct cect kub xray
+
+# vital signs and bedside measurements
+vitals pulse oximetry oximeter oxygen saturation spo2 sao2 pao2 paco2 fio2 hco3 etco2
+abg vbg ph base excess respiratory respiration rate heart rhythm blood pressure systolic
+diastolic mean arterial nibp ibp map cvp jvp temperature axillary rectal tympanic oral
+febrile afebrile capillary refill pallor cyanosis clubbing icterus lymphadenopathy
+oedema edema turgor sensorium orientation pupils reflexes glasgow coma scale score gcs
+pain vas urine output input intake balance bmi bsa muac circumference height weight
+waist hip fundal fetal foetal lie presentation dilation effacement apgar peak flow
+bradypnoea tachypnoea tachypnea apnoea hypothermia hyperthermia hypoxaemia hypoxemia
+saturating room air cannula mask ventilator peep tidal minute random pregnant
+
+# lab and vital-sign words in Devanagari
+हीमोग्लोबिन हेमोग्लोबिन क्रिएटिनिन क्रिएटिनीन हेमाटोक्रिट प्लेटलेट प्लेटलेट्स ल्यूकोसाइट
+न्यूट्रोफिल लिम्फोसाइट इओसिनोफिल मोनोसाइट बेसोफिल कोलेस्ट्रॉल कोलेस्ट्रोल ट्राइग्लिसराइड
+बिलीरुबिन यूरिया ग्लूकोज ग्लूकोज़ शुगर शर्करा सोडियम पोटेशियम पोटैशियम कैल्शियम मैग्नीशियम
+क्लोराइड एल्ब्यूमिन प्रोटीन ग्लोब्युलिन थायराइड थायरॉइड विटामिन आयरन फेरिटिन ऑक्सीजन
+सैचुरेशन संतृप्ति नाड़ी तापमान रक्तचाप धड़कन श्वसन बलगम थूक पेशाब एक्सरे सोनोग्राफी
+अल्ट्रासाउंड विडाल टाइफाइड सीबीसी ईएसआर
+
+# descriptive words in condition names and protocols
+visceral peripheral cutaneous systemic congenital neonatal maternal paediatric pediatric
+geriatric leishmaniasis filarial latent disseminated uncomplicated complicated
+breastfeeding breastfed lactating lactation underweight overweight immunised immunized

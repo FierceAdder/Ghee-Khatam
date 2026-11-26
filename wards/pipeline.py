@@ -92,6 +92,7 @@ class Pipeline:
         self.name_model = _load_name_model(policy.name_model, self.lexicon)
         self.model_skipped = 0
         self._repairs: dict[int, int] = {}
+        self._unclaimed: set[str] = set()    # record keys grouped but not reported as linked
         self._stage_started = 0.0
 
     # ------------------------------------------------------------------- driver
@@ -386,19 +387,25 @@ class Pipeline:
                 evidence.append(self.linker.evidence(record, state.order, reference_year))
                 orders.append(state.order)
         assigned = self.linker.link(evidence)
+        # Who a record is about, for names, ages and the date shift: the patient, else the
+        # group it forms with other records of its file, else the record itself.
+        local = {evidence[i].record.key: key for i, key in self.linker.local.items()}
+        people = [assigned.get(i) or local.get(item.record.key) or item.record.key
+                  for i, item in enumerate(evidence)]
+        self._unclaimed = {evidence[i].record.key for i in self.linker.unclaimed}
 
         sweeper = NameSweeper(self.lexicon)
         bags: dict[str, NameBag] = {}
         oldest: dict[str, int] = defaultdict(int)
         contexts: dict[str, PatientContext] = {}
         births: dict[str, set] = defaultdict(set)
-        for index, item in enumerate(evidence):
-            births[assigned.get(index) or item.record.key].update(item.summary.dobs)
+        for person, item in zip(people, evidence, strict=True):
+            births[person].update(item.summary.dobs)
         for index, item in enumerate(evidence):
             record = item.record
             pseudonym = assigned.get(index)
-            bag_key = pseudonym or record.key
-            bag = bags.setdefault(bag_key, NameBag())
+            person = people[index]
+            bag = bags.setdefault(person, NameBag())
             ages = [reference_year - d.year for d in item.summary.dobs]
             for _, mention in record_names(record, self.lexicon):
                 sweeper.register(mention)
@@ -408,18 +415,22 @@ class Pipeline:
                 if mention.etype is E.AGE and mention.value.isdigit():
                     ages.append(int(mention.value))
             if ages:
-                oldest[bag_key] = max(oldest[bag_key], max(ages))
+                oldest[person] = max(oldest[person], max(ages))
             contexts[record.key] = PatientContext(
                 pseudonym=pseudonym,
-                offset=self.privacy.shift_days(pseudonym or record.key),
+                offset=self.privacy.shift_days(person),
                 order=orders[index], reference_year=reference_year, bag=bag,
                 district=knowledge.record_district(record),
-                birth_dates=frozenset(births[bag_key]),
+                birth_dates=frozenset(births[person]),
                 shift_dates=pseudonym is not None
                 or any(m.etype is not E.DATE for _, m in record.mentions()))
-        for record_key, context in contexts.items():
-            context.top_coded = oldest[context.pseudonym or record_key] \
-                >= self.policy.age_top_code
+        # a local group moves its dates together or not at all
+        moved = {key for record_key, key in local.items()
+                 if contexts[record_key].shift_dates}
+        for person, item in zip(people, evidence, strict=True):
+            context = contexts[item.record.key]
+            context.shift_dates |= local.get(item.record.key) in moved
+            context.top_coded = oldest[person] >= self.policy.age_top_code
         self._demographics = _demographics(evidence, assigned, contexts)
         return contexts, sweeper
 
@@ -447,6 +458,8 @@ class Pipeline:
                 if personal:         # documents about nobody keep their medical content
                     self._merge(segment, conditions.mentions(segment))
             redactor.record(record, context)
+            if record.key in self._unclaimed:
+                record.patient = None     # written in the text, but not claimed as a link
         # File-level values belong to no patient: dates stay, but a birth date has no
         # offset to hide behind, so it is always removed.
         loose = PatientContext(pseudonym=None, offset=0, order=state.order,

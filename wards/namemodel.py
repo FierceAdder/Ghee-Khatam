@@ -28,7 +28,7 @@ import math
 import re
 from collections import Counter
 from collections.abc import Iterable
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from pathlib import Path
 
 from wards.lexicon import HONORIFICS_LATIN, KINSHIP, RESOURCE_DIR, Lexicon
@@ -42,6 +42,10 @@ SOURCE = "model"
 PRIORITY = 52
 
 _WORD = re.compile(r"[A-Za-z]+(?:['’][A-Za-z]+)*|[ऀ-ॣॱ-ॿ]+")
+# A written token before words() splits it: "HbA1c" is one token, though two words.
+_TOKEN = re.compile(r"(?:[^\W_]|[ऀ-ॣ०-ॿ])+(?:['’][A-Za-z]+)*")
+_INNER_CAPITAL = re.compile(r"[a-z][A-Z]")      # HbA1c, eGFR, pH
+_MAX_ACRONYM = 8                                # CBNAAT, TRUENAT
 _TITLES = frozenset("mr mrs ms miss smt shri shree sri kumari late km master baby".split())
 _DOCTOR = frozenset({"dr", "doctor", "prof"})
 _RELATION_BEFORE = re.compile(r"(?i)(?:[sdwbmfh][ \t]*/[ \t]*o|son of|daughter of|wife of|"
@@ -57,15 +61,18 @@ class Word:
     start: int
     end: int
     text: str
+    whole: str = ""                 # the written token this word was cut from
 
 
 def words(text: str) -> list[Word]:
     out = []
-    for m in _WORD.finditer(text):
-        word, end = m.group(0), m.end()
-        if len(word) > 2 and word[-2:].lower() in ("'s", "’s"):
-            word, end = word[:-2], end - 2         # possessive, as the rules read it
-        out.append(Word(m.start(), end, word))
+    for token in _TOKEN.finditer(text):
+        whole = token.group(0)
+        for m in _WORD.finditer(text, token.start(), token.end()):
+            word, end = m.group(0), m.end()
+            if len(word) > 2 and word[-2:].lower() in ("'s", "’s"):
+                word, end = word[:-2], end - 2     # possessive, as the rules read it
+            out.append(Word(m.start(), end, word, whole))
     return out
 
 
@@ -383,9 +390,8 @@ class NameModel:
         self.lexicon = lexicon
 
     def candidates(self, items: list[Word], covered: list[bool]) -> list[bool]:
-        """Words worth asking about: uncovered, not a known ordinary or medical word, and
-        not an abbreviation (all capitals, four letters or fewer)."""
-        return [ask(self.lexicon, w.text, covered[i]) for i, w in enumerate(items)]
+        """Words worth asking about (see :func:`ask`)."""
+        return [ask(self.lexicon, w.text, covered[i], w.whole) for i, w in enumerate(items)]
 
     def mentions(self, segment: Segment, stats: Stats) -> list[Mention]:
         return self.document([segment], stats).get(id(segment), [])
@@ -396,7 +402,7 @@ class NameModel:
         for segment in segments:
             text = segment.view.text
             for line_start, line in _lines(text):
-                items = [Word(w.start + line_start, w.end + line_start, w.text)
+                items = [replace(w, start=w.start + line_start, end=w.end + line_start)
                          for w in words(line)]
                 if not items:
                     continue
@@ -421,10 +427,17 @@ class NameModel:
         return found
 
 
-def ask(lexicon: Lexicon, word: str, covered: bool) -> bool:
-    if covered or len(word) < 2 or lexicon.is_stopword(word):
+def ask(lexicon: Lexicon, word: str, covered: bool, whole: str = "") -> bool:
+    """May the model be asked about this word? Not if the rules cover it, if it is an
+    ordinary or medical word, or if it is written like a code, test or unit: digits or an
+    inner capital anywhere in the written token (``HbA1c``, ``SpO2``, ``eGFR``), or a
+    short all-capital abbreviation (``HTN``, ``CBNAAT``)."""
+    token = whole or word
+    if covered or len(word) < 2 or lexicon.is_stopword(word) or lexicon.is_medical(token):
         return False
-    return not (word.isascii() and word.isupper() and len(word) <= 4)
+    if any(ch.isdigit() for ch in token) or _INNER_CAPITAL.search(token):
+        return False
+    return not (word.isascii() and word.isupper() and len(word) <= _MAX_ACRONYM)
 
 
 def _lines(text: str):

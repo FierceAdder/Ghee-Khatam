@@ -1,7 +1,8 @@
 """The medical veto: spans that look personal but must survive.
 
 The veto runs last and can only *remove* a detection, never add one. It protects doctors,
-hospitals, disease eponyms, the ASHA worker role, doses and machine identifiers.
+hospitals, disease eponyms, the ASHA worker and other hospital roles, doses and machine
+identifiers.
 """
 
 from __future__ import annotations
@@ -10,7 +11,7 @@ import re
 import unicodedata
 
 from wards.detect.tokens import Tokens
-from wards.lexicon import Lexicon
+from wards.lexicon import DEPARTMENT_WORDS, ROLE_WORDS, Lexicon
 from wards.model import NAME_TYPES, Mention
 
 
@@ -45,6 +46,18 @@ _ASHA = _compile(
     r"|(?i:asha)(?=[ \t]+(?i:worker|workers|karyakarta|sahyogini|sangini))"
     r"|(?:(?<=\bby )|(?<=\bthe )|(?<=\ban )|(?<=\blocal ))ASHA(?![A-Za-z])|आशा(?=[ \t]+(?:कार्यकर्ता|वर्कर|सहयोगिनी|संगिनी)))")
 _ABHA_LABEL = _compile(r"(?<![A-Za-z])ABHA(?![A-Za-z])")
+
+_WORDS = re.compile(r"[A-Za-z]+|[\u0900-\u0963\u0971-\u097f]+")
+_ROLES = frozenset(unicodedata.normalize("NFKC", w) for w in ROLE_WORDS)
+_DEPARTMENTS = frozenset(unicodedata.normalize("NFKC", w) for w in DEPARTMENT_WORDS)
+
+
+def role_only(value: str) -> bool:
+    """A hospital job and nothing else ("Lab Assistant", "ward boy", "स्टाफ")."""
+    words = [w.casefold() for w in _WORDS.findall(value)]
+    return any(w in _ROLES for w in words) \
+        and all(w in _ROLES or w in _DEPARTMENTS for w in words)
+
 
 _UUID = re.compile(r"[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}")
 _DOSE = _compile(
@@ -127,6 +140,8 @@ class Veto:
         values = self.value_spans(text)
         kept = []
         for mention in mentions:
+            if mention.etype in NAME_TYPES and role_only(mention.value):
+                continue                    # a job, not a person: never a relative
             if mention.source == "field":
                 kept.append(mention)
                 continue

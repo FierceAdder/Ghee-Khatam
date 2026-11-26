@@ -21,7 +21,7 @@ import io
 import json
 import random
 import sys
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from pathlib import Path
 from unittest import mock
 
@@ -83,7 +83,7 @@ def collect(dataset: Path, lexicon: Lexicon) -> list[Line]:
             text = segment.view.text
             name_spans, keep_spans = _spans(text, surfaces), _spans(text, keep)
             for line_start, line in _split(text):
-                items = [Word(w.start + line_start, w.end + line_start, w.text)
+                items = [replace(w, start=w.start + line_start, end=w.end + line_start)
                          for w in words(line)]
                 if not items:
                     continue
@@ -124,7 +124,7 @@ def candidates(lexicon: Lexicon, line: Line, covered_too: bool = False) -> list[
     """Words the model is asked about. In training, words the rules found are included
     too: the model must learn names the rules would miss, and it never sees whether a rule
     fired on the word itself."""
-    return [ask(lexicon, w.text, line.covered[i] and not covered_too)
+    return [ask(lexicon, w.text, line.covered[i] and not covered_too, w.whole)
             for i, w in enumerate(line.items)]
 
 

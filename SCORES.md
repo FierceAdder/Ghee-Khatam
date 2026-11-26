@@ -226,3 +226,39 @@ values are relative to the same attack on the raw input.
 A single run at Phase 8 with the secret `practice` gave A5 0.53, so the targeted attack
 depends noticeably on the date shifts. A1, A6 and A7 were 0 in that run. The medical
 values no longer kept since Phase 7 are the five one-patient diagnoses, removed on purpose.
+
+## Phase 15.5: fixes from an outside test set
+
+An outside hand-written set of 24 files and 12 patients, run once on the Phase 15 code, leaked
+21 of 204 pieces (hospital numbers 15 of 32), kept 94 of 106 medical values and linked with
+precision 1.00 and recall 0.72. It is now tuned and has not been run again, so there is no
+"after" figure for it.
+
+The fixes (T-97 to T-107) were measured on fixed sets with the learned check on:
+
+| Datasets | Leaked, before and after | Medical kept | Linking |
+|---|---|---|---|
+| Practice and its easy, hard and holdout copies | 0 of 3,230 each, unchanged | 4804-4805 to 4810 of 4855 | 1.00 / 1.00 |
+| Scrambled copies (4) | 2-3 of 3,230, unchanged | +5 to +6 | precision 1.00, recall 0.92-0.96 |
+| Generator training seeds 1-6 and one scrambled | 2-7 per set, unchanged | unchanged | precision 1.00, recall 0.95-0.99 |
+
+No wrong merge and no canary on any set; the same secret gives identical output. These sets hold
+few of the new failure cases, so "unchanged" shows no harm; the benefit is shown only by the new
+tests (984 tests pass). Known cost: on training copies with every name in capitals, leaked names
+went from 64 to 65, which also shows that all-capital names are a weak spot.
+
+## Phase 16.0: what leaked on test seeds 4-6
+
+Existing outputs of the Phase 15 code, counts only: 57 of 3,582 pieces.
+
+| Type | Leaked | Total |
+|---|---:|---:|
+| Other IDs | 24 | 138 |
+| PIN codes | 21 | 76 |
+| Landmarks | 10 | 76 |
+| Patient names (a partial Hinglish name) | 1 | 226 |
+| Villages | 1 | 432 |
+
+All in Latin or Hinglish text content. None is a critical identifier (phone, Aadhaar, ABHA, PAN,
+hospital number, email or full patient name), so the order of work did not change.
+

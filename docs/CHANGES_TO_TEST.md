@@ -105,6 +105,26 @@ The constraint-first union-find already exists. These refine it.
 | T-53 | Split work across the two CPUs | Time at 8k files | Faster and still byte-identical | open |
 | T-54 | Run the detector twice (the document's two-pass design) | Not to be built | Rejected: roughly doubles runtime | rejected |
 
+## Fixes from an outside test set (Phase 15.5)
+
+An outside hand-written set, run once on the Phase 15 code, showed these families. Every fix was
+reproduced with new invented cases; that set is now tuned and was not used to measure them.
+"Fixed sets" are practice, its altered and scrambled copies and generator training seeds 1-6.
+
+| ID | Change to test | How to measure | Keep if | Status |
+|---|---|---|---|---|
+| T-97 | Type an unfamiliar column, key or form field as a hospital number when its values share one shape, are nearly unique per person and sit beside patient names | New remove/keep cases; fixed sets | Unknown numbers removed; claim, bill and specimen numbers kept | kept: new cases pass (18 of the family's 41 failed before); fixed sets unchanged |
+| T-98 | Read the token after any "number" label as an identifier unless it is a date, dose, result or code | Same | Same | kept, as above |
+| T-99 | A code repeated with one patient's name in two or more files is that patient's number; a value seen with two people never links | Same, plus shared ward and package codes | No new false merge | kept, as above |
+| T-100 | Never ask the name model about codes, units, short all-capital words or lab terms; hospital job titles are never a person | New cases; fixed sets; training sets with names in capitals | Lab words kept, no new leaks | kept: medical values kept +5 to +6 on 8 sets, leaks unchanged; names in capitals leaked 64 to 65. Rejected part: not counting a model-only name as making a record personal (no measured gain, could leave dates unshifted) |
+| T-101 | Read the word after a kinship word as a relative in any case, guarded against ordinary Hinglish; a nurse "sister" is staff | Name and ordinary-sentence cases; fixed sets | Relatives removed, medical and linking unchanged | kept: unit cases pass; fixed sets unchanged |
+| T-102 | Address fields keep only public parts; locality parts after a house number are removed in prose | Same | No private part left, districts and states kept | kept, as above |
+| T-103 | Learn the last private part of a combined address cell and search other files for it | Same | Village gone elsewhere, generic phrases not learned | kept, as above |
+| T-104 | Search file names for every patient name part, any case, both scripts | Same | Names gone, ordinary file names unchanged | kept, as above |
+| T-105 | Joined and split given names are one name | Merge and never-merge pairs; fixed sets | No false merge | kept: 30 of the family's 61 new cases failed before; no wrong merge on any fixed set |
+| T-106 | A patient's registered phone plus a compatible name links a note; two fitting patients: abstain | Same | No false merge | kept, as above |
+| T-107 | Records of one file that share a specimen or visit number, or name, age and sex, share a pseudonym and date shift; thin ties are not claimed in `records.jsonl` | Same | One shift per specimen; homonyms apart | kept, as above |
+
 ## Questions to settle by measurement
 
 | ID | Question | Why it matters | Status |

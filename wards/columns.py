@@ -15,6 +15,8 @@ from functools import lru_cache
 
 from wards.lexicon import Lexicon
 from wards.model import FieldType as F
+from wards.normalize import id_key
+from wards.numbers import foreign_number, label_words, reads_as_other
 from wards.textview import TextView
 
 # "PatientName", "PatientID" and "Name1" are split into their words.
@@ -285,6 +287,87 @@ def _infer_single(cell: str, lexicon: Lexicon, context: Context) -> F | None:
             and VILLAGE_ENDING.search(cell) and not lexicon.district(cell):
         return F.VILLAGE
     return None
+
+
+# ------------------------------------------------ hospital numbers of unknown shapes
+
+# One token, possibly in parts: "TQV/R/3318", "ZK-2024-1187", "26/K/00417"
+_NUMBER_VALUE = re.compile(r"[A-Za-z0-9]+(?:[ ]?[/\-_.\\][ ]?[A-Za-z0-9]+)*$")
+_DIGIT_RUN = re.compile(r"\d{3}")
+# Prefixes that name an event or a thing: such a number is not the patient's.
+EVENT_PREFIX = re.compile(
+    r"(?i)(?:bill|inv|rcpt|rct|clm|claim|smp|spl|sample|spec|lab|vis|visit|acc|ord|txn|pkg|"
+    r"batch|lot|ward|bed|room|tkn|enc|req|rpt|doc|nabh|nabl|mci|iso|icd|loinc|ctri|nct)"
+    r"(?![a-z])")
+# Header words that make an identifier reading more likely. None of them is required.
+_NUMBER_HINTS = frozenset(unicodedata.normalize(
+    "NFKC", "no num number nbr id reg regn ref uhid mrn mrd crn mr ip ipd opd patient pt hosp "
+            "hospital सं नं संख्या क्रमांक पंजीकरण").split())
+
+
+def identifier_skeleton(value: str) -> str | None:
+    """``"TQV/R/3318"`` -> ``"AAA/A/#"`` for a value that could be a record number: one
+    token with a run of three digits, holding letters or separators, and no date, clinical
+    code or measurement. ``None`` for anything else."""
+    if not _NUMBER_VALUE.match(value) or not _DIGIT_RUN.search(value) or reads_as_other(value) \
+            or EVENT_PREFIX.match(value):
+        return None
+    if not 5 <= len(id_key(value)) <= 24:
+        return None
+    # a bare number could be a count, an amount or a PIN
+    if not any(c.isalpha() for c in value) \
+            and (value.isdigit() or sum(c.isdigit() for c in value) < 6):
+        return None
+    return re.sub(r"\d+", "#", re.sub(r"[A-Za-z]", "A", value))
+
+
+@dataclass(frozen=True)
+class NumberCell:
+    """One value of a field that may hold hospital numbers."""
+
+    key: str                   # the value without separators, upper-cased
+    record: str
+    person: str | None         # the one patient it is seen with, if any
+    shared: bool               # seen with different people, so it identifies none of them
+    numbered: bool             # its record already has a declared hospital number
+
+
+def personal_numbers(label: str, skeleton: str, cells: Sequence[NumberCell]) -> list[str]:
+    """The values of an unfamiliar field that are patients' own numbers.
+
+    Such a field is nearly unique per patient, one skeleton once digits are masked (the
+    caller groups by it) and anchored to a person. Claim, bill, specimen and visit numbers
+    look the same, so the label must not name an event or a thing, and one patient must not
+    hold a different value each time.
+    """
+    words = label_words(" ".join(normalize_label(label).split()))
+    if not cells or foreign_number(words):
+        return []
+    values = sorted({c.key for c in cells})
+    shared = {c.key for c in cells if c.shared}
+    if len(shared) * 10 > len(values):
+        return []                    # a ward, package or protocol code
+    held: dict[str, set[str]] = {}
+    records: dict[str, set[str]] = {}
+    for cell in cells:
+        if cell.person is not None:
+            held.setdefault(cell.person, set()).add(cell.key)
+        records.setdefault(cell.key, set()).add(cell.record)
+    anchored = sum(c.person is not None for c in cells)
+    if not held or anchored * 2 < len(cells):
+        return []
+    if sum(len(keys) > 1 for keys in held.values()) * 5 > len(held):
+        return []                    # a new number every time: an event, not a person
+    joins = any(len(found) > 1 for found in records.values())
+    hinted = any(word in _NUMBER_HINTS for word in words)
+    # beside a declared hospital number, another number needs more than its shape
+    if sum(c.numbered for c in cells) * 2 > len(cells) and not (joins or hinted):
+        return []
+    layered = "A" in skeleton and sum(not c.isalnum() and c != "#" for c in skeleton) >= 2
+    if not (len(values) >= 3 or joins or hinted or layered):
+        return []
+    owned = {c.key for c in cells if c.person is not None}
+    return [v for v in values if v in owned and v not in shared]
 
 
 def _one_word(column: Sequence[str]) -> bool:
