@@ -305,8 +305,9 @@ changes still to be tried are in [docs/CHANGES_TO_TEST.md](docs/CHANGES_TO_TEST.
 - Typing fields by their values can over-redact: capitalised phrases in an unfamiliar
   column beside identifiers may be taken for names, and a column of dates spread over ten
   years or more for birth dates.
-- The targeted attack still succeeds 45 to 53 % of the time on practice data, depending on
-  the secret: diagnoses shared by two or three patients are kept for research value.
+- The targeted attack still succeeds 57 % of the time on practice data (calibrated attack
+  replay, 10 secrets): few patients share a target's sex and age, so a kept diagnosis or the
+  exact length of stay can single one out.
 - The privacy settings were chosen on a practice set of 48 patients. The age-band rule
   adapts to larger data, but that behaviour has not been tested against a real registry.
 - Birth dates are removed so they cannot undo the age bands. This gives up the utility

@@ -29,6 +29,14 @@ def only_name(out, suffix: str) -> str:
                      for p in sorted((out.root / "sanitized").rglob("*" + suffix)))
 
 
+def released(out) -> str:
+    """Released file names and contents. Bare digits are searched only here: the log and the
+    report hold digests, in which any short run of digits can turn up by chance."""
+    folder = out.root / "sanitized"
+    return "\n".join(f"{p.relative_to(folder)}\n{p.read_text(encoding='utf-8')}"
+                     for p in sorted(folder.rglob("*")) if p.is_file())
+
+
 # ------------------------------------------------------------------ route 1: fields
 
 
@@ -160,7 +168,7 @@ def test_labelled_numbers_end_to_end(release):
     out = release({"ward/note_00417.txt": note,
                    "ward/slip.txt": "Send file 26/K/00417 back to records.\n"})
     everything = out.everything()
-    assert "00417" not in everything
+    assert "00417" not in released(out) and "26/K/00417" not in everything
     assert "K50.9" in everything and "QD/88127" in everything
 
 
@@ -184,7 +192,7 @@ def test_a_code_seen_twice_with_one_name_is_that_patients_number(release):
         "a.txt": "Patient Name: Pushpa Toppo\nCame with slip WQX7/4417K today.\n",
         "b.txt": "Patient Name: Pushpa Toppo\nWQX7/4417K shows old film.\n",
         "films/WQX7_4417K.txt": "Film normal.\n"})
-    assert "4417" not in out.everything()
+    assert "4417" not in released(out) and "WQX7" not in out.everything()
     claims = out.claims()
     assert claims[("a.txt", "doc")] == claims[("b.txt", "doc")] is not None
 

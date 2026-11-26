@@ -247,6 +247,54 @@ few of the new failure cases, so "unchanged" shows no harm; the benefit is shown
 tests (984 tests pass). Known cost: on training copies with every name in capitals, leaked names
 went from 64 to 65, which also shows that all-capital names are a weak spot.
 
+## Phase 16: calibrated attack replay
+
+The replay used for earlier privacy decisions read raw record linkage as about 0.67; the
+organisers publish 0.922. After the fix (T-111), on the raw practice input:
+
+| Reading | Organisers | Replay |
+|---|---:|---:|
+| Record linkage | 0.922 | 0.965 |
+| Patients re-identified | 0.979 | 0.979 |
+| Targeted success | 1.000 | 1.000 |
+| Targeted hits, date / condition / stay | 20 / 18 / 3 | 22 / 19 / 4 |
+| Unique records (not scored) | 0.701 | 0.762 |
+| Confident record re-identification (not scored) | 0.836 | 0.908 |
+
+The definitions of the last two are not published. On reference-like settings the replay reads
+higher than the organisers publish for their reference system on their own dataset (record
+linkage 0.499 against 0.277, patients 0.563 against 0.167, targeted 0.665 against 0.401): it is
+not weaker than theirs, but the setups differ too much to call this agreement.
+
+**Current release, 10 secrets** (score is 25 x privacy + 20 x utility; older attack figures in
+this file came from the uncalibrated replay and are not comparable):
+
+| Settings | A2/A3 | A4 | A5 | Utility | Score | Worst secret |
+|---|---:|---:|---:|---:|---:|---:|
+| **current** | 0.247 | 0.234 | 0.570 | 0.953 | **38.21** | 37.88 |
+| birth dates shifted | 0.792 | 0.868 | 0.700 | 0.961 | 31.11 | 30.18 |
+| birth year only | 0.789 | 0.872 | 0.700 | 0.960 | 31.08 | 30.61 |
+| widest age band 5 | 0.289 | 0.383 | 0.570 | 0.956 | 37.22 | 36.88 |
+| widest age band 10 | 0.255 | 0.255 | 0.570 | 0.955 | 38.09 | 37.75 |
+| rare diagnoses kept | 0.247 | 0.234 | 0.642 | 0.962 | 38.00 | 37.66 |
+| suppress up to 2 patients | 0.247 | 0.234 | 0.570 | 0.937 | 37.90 | 37.56 |
+| suppress up to 3 patients | 0.247 | 0.234 | 0.570 | 0.928 | 37.71 | 37.37 |
+| one age band width for all | 0.324 | 0.255 | 0.579 | 0.956 | 37.69 | 37.33 |
+
+No earlier decision changes. A first run had scored "birth year only" above removal because the
+replay could not read a bare year; that is fixed.
+
+**On 500 invented patients** (2,500-person register, rules only): current 44.01; birth dates
+shifted 43.49; one band width 43.74; the band cap and rare-diagnosis settings tie at 44.01. Risks
+there are very low (A4 0.000), so this shows no setting getting worse at scale more than it
+shows which is best.
+
+**Targeted attack: 0.570, and the target of 0.30 or less is not met.** 74 % of successes come
+from a condition plus the hospital and 24 % from the length of stay plus the hospital. Only 1 to 4
+patient profiles are consistent with each target's sex and age, so even a diagnosis shared by
+several patients singles one out. Suppressing more diagnoses, blanking districts and ignoring the
+hospital did not move it; exact length of stay is kept on purpose.
+
 ## Phase 16.0: what leaked on test seeds 4-6
 
 Existing outputs of the Phase 15 code, counts only: 57 of 3,582 pieces.

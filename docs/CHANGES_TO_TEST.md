@@ -133,7 +133,19 @@ reproduced with new invented cases; that set is now tuned and was not used to me
 | T-109 | Optional sealed input with a data key per file and keyed file names | Sealed and plain runs on the same input; wrong secret; damaged folder | Identical release; nothing plain written | kept |
 | T-110 | Optional encrypted copy of quarantined files, off by default | Contents and names of the folder; opening it | Only the secret holder can read it | kept, off by default |
 
+## Attack replay calibration and experiments (Phase 16)
 
+| ID | Change to test | How to measure | Keep if | Status |
+|---|---|---|---|---|
+| T-111 | Make the replay read the raw practice input as the organisers' attacker does | `tools/calibrate_attacker.py` against `dev/truth/raw_attack.json` | Scored readings within 0.05, signal hits within 2 | kept: all scored readings within; two unscored ones differ by 0.06 and 0.07 |
+| T-112 | Break the targeted attack down by signal | `tools/tune.py --targets`, 10 secrets | Names the signal to work on | done: condition with hospital 74 %, stay with hospital 24 %, date 1 % |
+| T-80 | Location generalised beyond district (division or none) | Upper bound: blank every district name in the release, 10 secrets | Score rises | rejected: A2-A5 unchanged (0.247, 0.234, 0.570), utility down, score 38.21 to 38.06 |
+| T-81 | Suppress diagnoses held by up to 2 or 3 patients | 10 secrets | Score rises | rejected: targeted attack unchanged; score 37.90 and 37.71 against 38.21 |
+| T-82 | Suppress rare procedures and billing package codes | Replay | Score rises | deferred: neither the replay nor the published attack uses a procedure signal, so it cannot be measured |
+| T-83 | Remove hospital names from records | Targeted success with the hospital signal ignored | Success falls | rejected: success unchanged at 0.570 without the signal |
+| T-113 | Re-check the privacy settings on 500 invented patients and a 2,500-person register | `tools/scale_attack_data.py`, 10 secrets, rules only | Same settings still win | held: no alternative scored higher; risks are so low there that most settings tie |
+
+## Questions to settle by measurement
 
 | ID | Question | Why it matters | Status |
 |---|---|---|---|
@@ -141,4 +153,4 @@ reproduced with new invented cases; that set is now tuned and was not used to me
 | Q-02 | How large are the hidden datasets compared with the roughly 240 MB where memory would run out? | Decides how urgent T-50 to T-52 are | open (ask organisers) |
 | Q-03 | Does the scorer inspect a leftover staging folder, and how does it treat a non-zero exit? | Decides failure behaviour | open (ask organisers) |
 | Q-04 | How much of the drop on unseen formats can label-free cues recover? | Ranks detection work | partly answered: scrambling labels and cues leaks 3 of 3230 on practice data and 11 (2 canaries) on the hard copy; the ablation gives each family's effect. Names that appear once in unfamiliar wording are the remaining gap |
-| Q-05 | How accurate is our attack replay compared with the real attacker? | Limits how far to trust privacy tuning | partly answered: matches on A4 and A5 for raw input; A2/A3 reads low |
+| Q-05 | How accurate is our attack replay compared with the real attacker? | Limits how far to trust privacy tuning | answered for the scored readings: within 0.05 of the organisers on raw input (T-111) |

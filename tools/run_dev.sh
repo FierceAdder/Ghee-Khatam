@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
-# The development loop: run -> validate -> self-check -> determinism -> secret change.
+# The development loop: run -> validate -> self-check -> determinism -> secret change,
+# and a check that the attack replay still reads the raw input as the organisers do.
 #
 #   tools/run_dev.sh [work-dir]
 #
@@ -64,5 +65,14 @@ if [ "$before" = "$(input_digest)" ]; then
   echo "ok    input left unchanged"
 else
   echo "FAIL  input was modified"; status=1
+fi
+if [ -f "$TOOLKIT_DIR/dev/truth/raw_attack.json" ]; then
+  if calibration="$("$PYTHON" "$ROOT/tools/calibrate_attacker.py" --toolkit "$TOOLKIT_DIR" --check)"
+  then
+    echo "ok    attack replay agrees with the organisers on the raw input"
+  else
+    echo "FAIL  attack replay no longer agrees with the organisers on the raw input"; status=1
+    echo "$calibration"
+  fi
 fi
 exit $status
