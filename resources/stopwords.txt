@@ -73,6 +73,11 @@ improved education counselled counseled known case seen came resident residing
 # words for the person a record is about
 beneficiary client subject member insured
 
+# hospital staff roles (the name next to them is removed, the role stays)
+nurse nursing technician technologist tech pharmacist receptionist counsellor counselor
+operator physiotherapist dietitian dietician staff sn gnm anm mpw cho deo aaya
+नर्स सिस्टर फार्मासिस्ट तकनीशियन
+
 # months and days
 january february march april june july august september october november december jan
 feb mar apr jun jul aug sep sept oct nov dec monday tuesday wednesday thursday friday

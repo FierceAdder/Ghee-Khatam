@@ -54,7 +54,8 @@ EVIDENCE = {
     "postposition": "known words (ko, ka…)", "possessive": "known words ('s report)",
     "report_of": "known words (report of)", "before_age": "layout (name before Age)",
     "time_entry": "layout (time - name -)", "before_phone": "layout (name before phone)",
-    "chat_sender": "layout (chat sender)", "address": "known words (H.No., near…)",
+    "chat_sender": "layout (chat sender)", "staff_role": "known words (nurse, technician…)",
+    "staff_done_by": "known words (collected by…)", "address": "known words (H.No., near…)",
     "path": "file name pieces",
 }
 

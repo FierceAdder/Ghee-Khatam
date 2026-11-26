@@ -25,7 +25,7 @@ _NULL_VALUE = re.compile(r"(?i)^(?:n/?a|nil|none|null|unknown|not[ \t]+(?:known|
 _NAME_FIELDS = {F.PATIENT_NAME: Role.PATIENT, F.FIRST_NAME: Role.PATIENT,
                 F.NAME: Role.PATIENT,
                 F.LAST_NAME: Role.PATIENT, F.RELATIVE_NAME: Role.RELATIVE,
-                F.PERSON_NAME: Role.UNKNOWN}
+                F.PERSON_NAME: Role.UNKNOWN, F.STAFF_NAME: Role.STAFF}
 _ID_ONLY_FIELDS = frozenset({F.ORG, F.DISTRICT, F.STATE, F.SEX, F.DOCTOR_NAME, F.CLINICAL})
 _RELATION_PREFIX = re.compile(
     r"(?i)^[ \t]*(?:[sdwch][ \t]*/[ \t]*o|son[ \t]+of|daughter[ \t]+of|wife[ \t]+of|care[ \t]+of)"

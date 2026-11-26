@@ -256,3 +256,60 @@ def test_edits_cover_whole_characters(source, cut):
     view = TextView.of(source)
     low, high = view.source_span(0, len(cut))
     assert high == len(source) or source[high] == " "
+
+
+# --------------------------------------------------------------------- staff
+# Staff other than doctors are removed as [STAFF], never treated as the patient and never
+# used for linking. Doctors and role words ("ASHA worker") stay.
+
+
+@pytest.mark.parametrize("text, name", [
+    ("Collected by: Meena Kujur (Lab Tech)", "Meena Kujur"),
+    ("Sample collected by Meena Kujur", "Meena Kujur"),
+    ("Staff Nurse Rekha Toppo on duty", "Rekha Toppo"),
+    ("Sister Rekha gave injection", "Rekha"),
+    ("SN Rekha Toppo", "Rekha Toppo"),
+    ("ANM Sunita Lakra visited", "Sunita Lakra"),
+    ("ASHA worker Sunita Lakra referred", "Sunita Lakra"),
+    ("Verified by: Anil Minz, Lab Technician", "Anil Minz"),
+    ("Anil Minz, Pharmacist", "Anil Minz"),
+    ("नर्स रेखा टोप्पो ने इंजेक्शन दिया", "रेखा टोप्पो"),
+])
+def test_staff_names_are_found_as_staff(unlisted, text, name):
+    found = unlisted.detect_segment(Segment(text, field=F.TEXT))
+    assert [(m.value, m.role) for m in found if m.etype in NAMES] == [(name, Role.STAFF)]
+
+
+@pytest.mark.parametrize("text", ["Dr. Anil Minz reviewed", "Referred by ASHA worker of the village",
+                                  "Staff nurse informed the doctor"])
+def test_doctors_and_role_words_stay(detector, text):
+    assert mentions(detector, text, *NAMES) == []
+
+
+@pytest.mark.parametrize("text", ["his sister Meena accompanied", "Name: ASHA TIRKEY  Age: 48/F"])
+def test_relatives_and_patients_are_not_staff(detector, text):
+    found = detector.detect_segment(Segment(text, field=F.TEXT))
+    assert all(m.role is not Role.STAFF for m in found)
+
+
+@pytest.mark.parametrize("path", [("lab_technician",), ("nurse",), ("verified_by",),
+                                  ("collected_by",), ("staff_nurse", "name")])
+def test_staff_keys(path):
+    from wards.columns import classify_json_key
+
+    assert classify_json_key(path) is F.STAFF_NAME
+
+
+def test_staff_are_removed_and_do_not_disturb_linking(release):
+    out = release({
+        "reg.csv": "UHID,Patient Name,Mobile\nQXR/26/004411,Meren Longkumer,9812345670\n",
+        "note.txt": "UHID QXR/26/004411. Patient Meren Longkumer has fever.\n"
+                    "Staff Nurse Rekha Toppo gave paracetamol. Dr. Anil Minz reviewed.\n",
+        "lab.json": '{"patient": {"name": "Meren Longkumer", "uhid": "QXR/26/004411"}, '
+                    '"lab_technician": "Rekha Toppo", "test": "Haemoglobin", "value": 11.2}'})
+    note, lab = out.text("note.txt"), out.text("lab.json")
+    assert "Rekha" not in note + lab and "[STAFF]" in note and "[STAFF]" in lab
+    assert "Dr. Anil Minz reviewed" in note
+    claims = out.claims()
+    assert claims[("note.txt", "doc")] == claims[("reg.csv", "row:0")] \
+        == claims[("lab.json", "doc")] is not None

@@ -88,7 +88,9 @@ def record_names(record: Record, lexicon: Lexicon) -> list[tuple[Name, Mention]]
     found: list[tuple[Name, Mention]] = []
     parts: dict[Role, list[tuple[bool, Mention]]] = defaultdict(list)
     for segment, mention in record.mentions():
-        if mention.etype not in NAME_TYPES or mention.source == CLIPPED:
+        # staff are not the patient and not a clue to who the patient is
+        if mention.etype not in NAME_TYPES or mention.source == CLIPPED \
+                or mention.role is Role.STAFF:
             continue
         if segment.field in (F.FIRST_NAME, F.LAST_NAME) and mention.source == "field":
             parts[mention.role].append((segment.field is F.LAST_NAME, mention))

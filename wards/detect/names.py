@@ -63,9 +63,27 @@ _REPORT_OF = _compile(
     r"(?:of|for)[ \t]+", re.IGNORECASE)
 
 _ACTED_BY = _compile(
-    r"(?<![A-Za-z])(?:called|witnessed|signed|informed|reported|collected|received|brought|"
+    r"(?<![A-Za-z])(?:called|witnessed|informed|received|brought|"
     r"accompanied|raised|paid|escorted|identified|consented|submitted|dropped)[ \t]+"
     r"(?:in[ \t]+)?by[ \t]*[:\-]?[ \t]*", re.IGNORECASE)
+# Done by hospital staff: "Sample collected by Meena", "Verified by: Anil".
+_DONE_BY_STAFF = _compile(
+    r"(?<![A-Za-z])(?:signed|reported|collected|verified|entered|prepared|checked|counsell?ed|"
+    r"dispensed|recorded|typed|approved|issued|attended)[ \t]+by[ \t]*[:\-]?[ \t]*",
+    re.IGNORECASE)
+# Staff roles written before or after a name. "Sister" must be capitalised: "his sister
+# Meena" is a relative. ASHA and ANM workers are named in referral notes.
+_STAFF_WORDS = (
+    r"(?:(?i:staff[ \t]+nurse|nursing[ \t]+(?:staff|officer)|nurse(?:[ \t]+in[ \t]+charge)?|"
+    r"lab(?:oratory)?[ \t]*tech(?:nician)?|technician|technologist|pharmacist|"
+    r"ward[ \t]+(?:boy|aya|aaya)|receptionist|counsell?or|data[ \t]+entry[ \t]+operator|"
+    r"physiotherapist|dietitian|dietician|health[ \t]+worker|asha[ \t]+(?:worker|didi|"
+    r"sahyogini|karyakarta)|anm(?:[ \t]+didi)?)|Sister|SN|GNM|ANM|MPW|CHO|DEO|"
+    r"नर्स|सिस्टर|फार्मासिस्ट|तकनीशियन|एएनएम|आशा[ \t]*(?:कार्यकर्ता|दीदी|सहयोगिनी)?)")
+_STAFF_BEFORE = _compile(
+    r"(?<![A-Za-z\u0900-\u097f'’])(?<!his )(?<!her )(?<!uski )(?<!unki )" + _STAFF_WORDS
+    + r"(?![A-Za-z\u0900-\u097f])[ \t]*[:\-–]?[ \t]*")
+_STAFF_AFTER = _compile(r"[ \t]*[,(][ \t]*" + _STAFF_WORDS + r"(?![A-Za-z\u0900-\u097f])")
 
 _ROLE_AFTER = _compile(
     r"[ \t]*\([ \t]*(?:attendant|relative|visitor|caller|witness|friend|neighbou?r|brother|"
@@ -247,11 +265,17 @@ class NameDetector:
         for pattern, role, priority, source in (
                 (_REPORT_OF, Role.PATIENT, 76, "report_of"),
                 (_ACTED_BY, Role.RELATIVE, 66, "acted_by"),
+                (_DONE_BY_STAFF, Role.STAFF, 66, "staff_done_by"),
+                (_STAFF_BEFORE, Role.STAFF, 81, "staff_role"),
                 (_TITLE, Role.UNKNOWN, 62, "title")):
             for m in pattern.finditer(text):
                 run = _after(tokens, m.end())
                 if run:
                     found.append(_mention(tokens, run, role, priority, source))
+        for m in _STAFF_AFTER.finditer(text):
+            run = _before(tokens, m.start(), r"[ \t]*")
+            if run:
+                found.append(_mention(tokens, run, Role.STAFF, 81, "staff_role"))
         for m in _ROLE_AFTER.finditer(text):
             run = _before(tokens, m.start(), r"[ \t]*")
             if run:

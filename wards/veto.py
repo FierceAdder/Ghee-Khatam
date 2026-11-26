@@ -55,6 +55,7 @@ _FREQUENCY = re.compile(r"(?<![\d\-])[0-4½](?:\.5)?(?:-[0-4½](?:\.5)?){2,3}(?!
 
 # Detectors whose context states outright that a person is meant.
 _EXPLICIT_PERSON = frozenset({"patient_label", "relative_label", "relation", "relation_subject",
+                              "staff_role", "staff_done_by",
                               "care_of", "chat_sender", "report_of", "address"})
 
 

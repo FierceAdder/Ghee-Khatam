@@ -70,6 +70,7 @@ score would notice.
 | T-3E | Recognise diagnoses for rare-condition suppression by value shape (ICD code beside a text), not by the key word "diagnosis" | Scrambled copies: suppressed codes and attack replay | All one-patient codes suppressed with labels scrambled | open: with labels scrambled most of the five codes were kept (Phase 14) |
 | T-3F | One identifier kind for hospital and insurance numbers in linking | Held-out copy, unit case | Recall rises, no false merges | kept: held-out recall 0.95 to 0.99, precision 1.00 |
 | T-3G | An unrecognised partner of a recognised name-part column is the other part | Unit cases, held-out copy | Rows stop looking like two people | kept |
+| T-3H | Remove staff names (nurses, technicians, pharmacists, ASHA and ANM workers) as `[STAFF]`; keep doctors and role words; never link by them | Unit cases; practice and altered copies | Staff names gone, links and medical values unchanged | kept: practice and all copies unchanged (they name no staff); structured staff fields previously leaked |
 
 ## Linking (proposed changes 2 and 3)
 

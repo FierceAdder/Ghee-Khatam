@@ -59,6 +59,7 @@ QUASI_TYPES = frozenset({EntityType.DATE, EntityType.AGE, EntityType.DIAGNOSIS})
 class Role(str, Enum):
     PATIENT = "patient"
     RELATIVE = "relative"
+    STAFF = "staff"                  # nurses, technicians, pharmacists: removed, never linked
     UNKNOWN = "unknown"
 
 
@@ -71,6 +72,7 @@ class FieldType(str, Enum):
     LAST_NAME = "last_name"
     RELATIVE_NAME = "relative_name"
     PERSON_NAME = "person_name"      # a person who is not known to be the patient
+    STAFF_NAME = "staff_name"        # hospital staff other than doctors
     NAME = "name"                    # a "name" key whose owner is unknown
     DOCTOR_NAME = "doctor_name"
     PHONE = "phone"

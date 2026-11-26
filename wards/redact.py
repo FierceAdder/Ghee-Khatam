@@ -31,6 +31,7 @@ TOKENS = {
     E.LOCALITY: "[LOCALITY]", E.LANDMARK: "[LANDMARK]", E.VILLAGE: "[VILLAGE]",
     E.TEHSIL: "[TEHSIL]", E.PIN: "[PIN]", E.DOB: "[DOB]", E.DATE: "[DATE]", E.AGE: "[AGE]",
 }
+STAFF_TOKEN = "[STAFF]"
 ATTACHMENT_PLACEHOLDER = base64.b64encode(b"[ATTACHMENT REMOVED]").decode("ascii")
 _GENERALIZING = frozenset({E.AGE, E.DOB, E.VILLAGE, E.TEHSIL, E.PIN, E.DIAGNOSIS})
 _DIGIT_PRESERVING = frozenset({E.AGE, E.DATE, E.DOB, E.PIN})
@@ -171,6 +172,8 @@ class Redactor:
     def _name(self, mention: Mention, context: PatientContext) -> str:
         keys = {self.lexicon.name_key(w) for w in name_tokens(mention.value, self.lexicon)}
         bag = context.bag
+        if mention.role is Role.STAFF:
+            return STAFF_TOKEN
         if mention.role is Role.RELATIVE:
             return TOKENS[E.RELATIVE_NAME]
         if keys & bag.patient or (mention.role is Role.PATIENT and not bag.patient):

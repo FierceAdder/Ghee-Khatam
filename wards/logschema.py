@@ -43,7 +43,8 @@ SOURCES = frozenset({
     "sweep", "rare", "clipped", "gazetteer", "patient_label", "relative_label",
     "spoken_name", "patient_word", "relation", "relation_subject", "care_of", "role_after",
     "acted_by", "honorific", "title", "postposition", "possessive", "report_of",
-    "before_age", "time_entry", "before_phone", "chat_sender", "other"})
+    "before_age", "time_entry", "before_phone", "chat_sender", "staff_role", "staff_done_by",
+    "other"})
 
 ENTITIES = frozenset(e.value for e in EntityType)
 

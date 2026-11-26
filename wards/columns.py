@@ -42,9 +42,16 @@ def _phrases(spec: str) -> tuple[str, ...]:
 
 
 # First match wins, so the specific rules come before the generic ones.
+_STAFF_SPEC = ("staff|staff name|staff nurse|nurse|nurse name|nursing staff|nursing officer|sister|"
+                   "technician|lab technician|lab tech|technologist|pharmacist|ward boy|"
+                   "entered by|verified by|checked by|prepared by|collected by|"
+                   "sample collected by|counsellor|counselor|data entry operator|operator|"
+                   "anm|asha name|asha worker|health worker|receptionist|"
+                   "नर्स|सिस्टर|फार्मासिस्ट|तकनीशियन|एएनएम")
 _RULES: tuple[tuple[F, tuple[str, ...]], ...] = tuple((kind, _phrases(spec)) for kind, spec in (
     (F.CODE, "visit id|bill no|bill number|sample id|loinc|package code|icd code|resource type|"
              "full url|trip|schema|version|ticket id|accession no|barcode"),
+    (F.STAFF_NAME, _STAFF_SPEC),
     (F.ABHA_ADDRESS, "abha address|abha addr|phr address|health address"),
     (F.ABHA_NUMBER, "abha|abha no|abha number|abha id|health id|health account"),
     (F.AADHAAR, "aadhaar|aadhar|adhaar|adhar|aadhaar no|aadhar no|uidai|uid no|आधार"),
@@ -111,6 +118,7 @@ _RULES: tuple[tuple[F, tuple[str, ...]], ...] = tuple((kind, _phrases(spec)) for
 ))
 
 # "Hospital Name", "Drug Name", ...: the word "name" belongs to a thing, not a person.
+_STAFF_PHRASES = _phrases(_STAFF_SPEC)
 _THING_NAME = _phrases("hospital|facility|lab|laboratory|drug|medicine|test|panel|"
                        "procedure|department|ward|file|brand|generic|product|package|"
                        "organisation|organization|scheme|bank|branch|village|district")
@@ -124,7 +132,8 @@ def classify_label(label: str) -> F | None:
         return F.CODE if text.strip() else None
     if text == " contact ":
         return F.PHONE
-    if text.endswith((" name ", " naam ")) and any(p in text for p in _THING_NAME):
+    if text.endswith((" name ", " naam ")) and any(p in text for p in _THING_NAME) \
+            and not any(p in text for p in _STAFF_PHRASES):
         return F.ORG
     for kind, phrases in _RULES:
         for phrase in phrases:
@@ -346,12 +355,14 @@ _PERSON_CONTAINERS: tuple[tuple[F, tuple[str, ...]], ...] = tuple(
     (kind, _phrases(spec)) for kind, spec in (
         (F.DOCTOR_NAME, "doctor|consultant|physician|practitioner|author|surgeon|"
                         "referred by|reviewed by"),
+        (F.STAFF_NAME, "staff|nurse|sister|technician|pharmacist|collected by|verified by|"
+                       "entered by|prepared by|checked by|created by|signed by|reported by"),
         (F.ORG, "facility|hospital|organization|organisation|lab|panel|panels|department|"
                 "ward|wards|payer"),
         (F.RELATIVE_NAME, "guardian|relative|relatives|father|mother|husband|spouse|kin|"
                           "attendant|nominee|emergency contact"),
-        (F.PERSON_NAME, "raised by|witness|caller|reported by|informant|signed by|"
-                        "contact person|contact|requested by|created by|collected by|user"),
+        (F.PERSON_NAME, "raised by|witness|caller|informant|"
+                        "contact person|contact|requested by|user"),
         (F.PATIENT_NAME, "patient|patients|pt|pat|beneficiary|member|subject|client|insured"),
     ))
 _GENERIC_NAME_KEYS = frozenset({"name", "text", "full", "full name", "display name", "local"})
@@ -387,7 +398,7 @@ def classify_json_key(path: Sequence[str]) -> F:
         people = ancestors[:-1] if nested_in_name else ancestors
         role = _container_role(people)
         if key in _NAME_PART_KEYS or key == "middle":
-            if role in (F.RELATIVE_NAME, F.DOCTOR_NAME, F.PERSON_NAME):
+            if role in (F.RELATIVE_NAME, F.DOCTOR_NAME, F.PERSON_NAME, F.STAFF_NAME):
                 return role
             return _NAME_PART_KEYS.get(key, F.FIRST_NAME) if nested_in_name else F.TEXT
         if role is not None:
@@ -399,12 +410,14 @@ def classify_json_key(path: Sequence[str]) -> F:
     kind = classify_label(path[-1])
     if kind is F.PATIENT_NAME:
         role = _container_role(ancestors)
-        if role in (F.DOCTOR_NAME, F.RELATIVE_NAME, F.PERSON_NAME):
+        if role in (F.DOCTOR_NAME, F.RELATIVE_NAME, F.PERSON_NAME, F.STAFF_NAME):
             return role
     if kind is F.CODE and key in ("relation", "relationship"):
         return F.CODE
-    if kind is None and _container_role(ancestors) in (F.PATIENT_NAME, F.PERSON_NAME,
-                                                       F.RELATIVE_NAME):
+    container = _container_role(ancestors) if kind is None else None
+    if container is F.STAFF_NAME:
+        return F.STAFF_NAME
+    if container in (F.PATIENT_NAME, F.PERSON_NAME, F.RELATIVE_NAME):
         return F.NAME        # used only if the value reads like a person
     return kind or F.TEXT
 

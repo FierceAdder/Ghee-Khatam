@@ -122,6 +122,7 @@ run.
 |---|---|
 | Patient name | pseudonym `PSN-XXXXXX` (HMAC-SHA256 keyed with `RAKSHA_SECRET`) or `[NAME]` |
 | Relatives, phones, IDs, e-mail | typed tokens; numbers in JSON become `0` |
+| Staff other than doctors (nurses, technicians, pharmacists, ASHA and ANM workers) | `[STAFF]`, never used to link patients |
 | Dates | shifted by a per-patient offset of 1 to 180 days, in the original format |
 | Age | band of 5 to 15 years, chosen once per release from how crowded district-and-sex groups are; `90+` from 90 |
 | Rare diagnosis | a code held by one patient becomes `R69` and its names `[CONDITION]`, in every patient record; documents about no one keep it |
