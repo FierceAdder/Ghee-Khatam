@@ -70,6 +70,10 @@ output/
 
 ## Architecture
 
+[docs/PIPELINE_WALKTHROUGH.md](docs/PIPELINE_WALKTHROUGH.md) (also as PDF) follows one
+invented patient through every stage below, showing the real output of each;
+`python3 tools/explain.py` regenerates it from the code.
+
 ```
  input folder (read only)
         |

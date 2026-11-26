@@ -1,0 +1,9 @@
+{
+  "patient": {"name": "Sunita Kerketta", "uhid": "KMC/26/004411"},
+  "collected": "13/04/2026",
+  "results": [
+    {"test": "Haemoglobin", "value": 10.2, "unit": "g/dL"},
+    {"test": "Platelet count", "value": 150000, "unit": "/uL"}
+  ],
+  "referred_by": "Dr. Birsa Oraon"
+}

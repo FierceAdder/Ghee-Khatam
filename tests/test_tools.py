@@ -168,3 +168,32 @@ def test_ablation_rejects_an_unknown_family():
     assert _patches("nothing") == []
     with pytest.raises(SystemExit):
         _patches("everything")
+
+
+# ------------------------------------------------------------- walkthrough
+
+
+@pytest.mark.skipif(not (ROOT / "docs" / "examples").is_dir(), reason="docs not in this image")
+def test_the_walkthrough_matches_what_the_code_does(tmp_path):
+    from explain import EXAMPLE, explain
+
+    fresh = explain(EXAMPLE / "input", EXAMPLE / "template.md", tmp_path / "walk.md")
+    committed = (ROOT / "docs" / "PIPELINE_WALKTHROUGH.md").read_text(encoding="utf-8")
+    assert fresh == committed, "run python3 tools/explain.py and commit the result"
+    assert "<!-- explain:" not in fresh
+
+
+def test_the_walkthrough_tool_refuses_real_data_in_the_repository(monkeypatch):
+    import explain
+
+    monkeypatch.setattr(sys, "argv", ["explain.py", "--input", str(TOOLKIT / "dev" / "input")])
+    with pytest.raises(SystemExit, match="refusing"):
+        explain.main()
+
+
+def test_markdown_conversion():
+    from md_to_pdf import convert
+
+    page = convert("# T\n\n| a | b |\n|---|---|\n| `x\\|y` | **z** |\n\n- one\n- two\n")
+    assert "<h1>T</h1>" in page and "<td><code>x|y</code></td>" in page
+    assert "<li>one</li><li>two</li>" in page and "<b>z</b>" in page
