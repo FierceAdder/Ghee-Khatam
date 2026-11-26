@@ -26,6 +26,7 @@ from wards.clinical import ConditionPlan
 from wards.detect import Detector, resolve
 from wards.errors import ConfigError, QuarantineError
 from wards.knowledge import Knowledge, id_shape
+from wards.layout import LayoutTypes
 from wards.lexicon import Lexicon
 from wards.link import Linker, record_names
 from wards.model import Channel, DocKind, Document, Segment
@@ -116,6 +117,9 @@ class Pipeline:
 
         self._each(states, "parse", self._parse, needs_doc=False)
         self._stage_done("parse", states)
+        # unknown form labels typed by their values across the whole dataset
+        self.detector.layout = LayoutTypes.learn([s.doc for s in states if s.alive],
+                                                 self.lexicon)
         self._each(states, "detect", lambda s: self.detector.detect_document(s.doc))
         self._stage_done("detect", states)
 

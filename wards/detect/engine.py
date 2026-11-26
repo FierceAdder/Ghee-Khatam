@@ -13,6 +13,8 @@ from wards.detect.demographics import MAX_AGE, detect_ages, detect_dates
 from wards.detect.ids import detect_ids
 from wards.detect.names import NameDetector
 from wards.detect.tokens import Tokens
+from wards.layout import PRIORITY as LAYOUT_PRIORITY
+from wards.layout import LayoutTypes
 from wards.lexicon import HONORIFICS_LATIN, Lexicon
 from wards.model import CLIPPED, NAME_TYPES, Channel, Document, Mention, Role, Segment
 from wards.model import EntityType as E
@@ -119,6 +121,7 @@ class Detector:
         self.names = NameDetector(lexicon)
         self.address = AddressDetector(lexicon)
         self.veto = Veto(lexicon)
+        self.layout = LayoutTypes()          # learned per dataset by the pipeline
 
     def detect_document(self, doc: Document) -> None:
         for segment in doc.segments:
@@ -148,7 +151,7 @@ class Detector:
             if segment.numeric:
                 found = [m for m in detect_ids(text) if m.start == 0 and m.end == len(text)]
             else:
-                found = self.free_text(text)
+                found = self.free_text(text) + self.form_values(text)
         else:
             structured = self.structured(field, text)
             if structured is None:
@@ -171,6 +174,16 @@ class Detector:
             found += self.names.before_phone(text, phones, tokens)
         if embedded:
             found += self.embedded(text)
+        return found
+
+    def form_values(self, text: str) -> list[Mention]:
+        """Values under form labels whose type was learned from the dataset (wards.layout)."""
+        found = []
+        for kind, start, end in self.layout.typed_values(text):
+            for m in self.structured(kind, text[start:end]) or []:
+                found.append(Mention(m.etype, m.start + start, m.end + start, m.value,
+                                     role=m.role, priority=LAYOUT_PRIORITY, source="layout",
+                                     data=m.data))
         return found
 
     def embedded(self, text: str) -> list[Mention]:

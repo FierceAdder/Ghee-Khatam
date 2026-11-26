@@ -55,7 +55,8 @@ EVIDENCE = {
     "report_of": "known words (report of)", "before_age": "layout (name before Age)",
     "time_entry": "layout (time - name -)", "before_phone": "layout (name before phone)",
     "chat_sender": "layout (chat sender)", "staff_role": "known words (nurse, technician…)",
-    "staff_done_by": "known words (collected by…)", "address": "known words (H.No., near…)",
+    "staff_done_by": "known words (collected by…)",
+    "layout": "form layout (label typed by its values)", "address": "known words (H.No., near…)",
     "path": "file name pieces",
 }
 

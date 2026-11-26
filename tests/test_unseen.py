@@ -332,3 +332,26 @@ def test_a_clue_seen_in_a_set_aside_record_is_not_unique(release):
                    "QXR-0002,Kulwant Brar,S/o,Gurdeep Brar,5821 7365 9013,\n",
         "note.txt": "Kulwant, S/o Gurdeep, discharged in stable condition.\n"})
     assert out.claims()[("note.txt", "doc")] is None
+
+
+# ------------------------------------------------------------- form layouts
+
+
+def test_form_pairs_are_read_without_knowing_the_label():
+    from wards.layout import pairs
+
+    text = "Name of Pt :- Lalthanzuala Ralte\nMauza    Sohangarh\nRogi : Tomba Hmar    Yrs : 45/M\n"
+    found = [(label, text[s:e]) for label, s, e in pairs(text)]
+    assert ("Name of Pt", "Lalthanzuala Ralte") in found and ("Mauza", "Sohangarh") in found
+    assert ("Rogi", "Tomba Hmar") in found and ("Yrs", "45/M") in found
+
+
+def test_an_unknown_label_is_typed_by_its_values_across_files(release):
+    notes = {f"n{i}.txt": f"Card : QXR/26/00441{i}\nRogi :- {name}\nMauza : {village}\n"
+             for i, (name, village) in enumerate([("Lalthanzuala Ralte", "Sohangarh"),
+                                                  ("Tomba Hmar", "Bhimkhera"),
+                                                  ("Kyrshan Syiem", "Chandpurwa")])}
+    out = release(notes)
+    text = " ".join(out.text(name) for name in notes)
+    for value in ("Lalthanzuala", "Tomba Hmar", "Kyrshan", "Sohangarh", "Bhimkhera"):
+        assert value not in text
