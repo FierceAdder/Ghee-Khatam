@@ -215,7 +215,7 @@ def test_durations_and_bands_are_not_ages(detector, text):
 
 @pytest.mark.parametrize("value, expected", [
     ("45-49", []), ("90+", []), ("47 वर्ष", ["47"]), ("35 yrs 2 months", ["35"]),
-    ("8 months", ["8 months"]), ("45.5", ["45"]),
+    ("8 months", ["8 months"]), ("45.5", ["45"]), ("-2 yrs", ["-2 yrs"]),
 ])
 def test_typed_age_values(detector, value, expected):
     assert values(detector, value, E.AGE, field=F.AGE) == expected

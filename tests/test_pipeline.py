@@ -170,7 +170,8 @@ def test_json_keeps_structure_types_and_numbers(full, tmp_path):
     visit = data["visits"][0]
     assert list(visit) == list(json.loads(FILES["opd/visits.json"])["visits"][0])
     assert visit["patient"]["mobile"] == 0
-    assert visit["patient"]["age"] == "40-44"
+    low, high = map(int, visit["patient"]["age"].split("-"))
+    assert low <= 44 <= high
     assert '"temp_f": 98.6' in text
     assert "Tab Amlodipine 5 mg 0-0-1" in visit["notes"]
     assert visit["doctor"] == "Dr. Anil Mehra"
@@ -203,7 +204,8 @@ def test_text_keeps_line_endings(full, tmp_path):
     names = outputs(full, tmp_path)
     data = (full.root / names["notes/Wanrisha_Kharbuli_KMC-100417.txt"]["output"]).read_bytes()
     assert data.count(b"\r\n") == 6
-    assert "Diagnosis: Essential hypertension (I10). BP 150/90." in data.decode("utf-8")
+    # the only patient is also the only holder of the diagnosis, so it is suppressed
+    assert "Diagnosis: [CONDITION] (R69). BP 150/90." in data.decode("utf-8")
 
 
 def test_headers_and_keys_stay_unique(full, tmp_path):

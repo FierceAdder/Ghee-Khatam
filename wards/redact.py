@@ -12,6 +12,7 @@ import unicodedata
 from collections import Counter
 from dataclasses import dataclass, field
 
+from wards.clinical import CODE_REPLACEMENT, NAME_REPLACEMENT
 from wards.knowledge import Knowledge
 from wards.lexicon import Lexicon
 from wards.link import name_tokens
@@ -31,7 +32,7 @@ TOKENS = {
     E.TEHSIL: "[TEHSIL]", E.PIN: "[PIN]", E.DOB: "[DOB]", E.DATE: "[DATE]", E.AGE: "[AGE]",
 }
 ATTACHMENT_PLACEHOLDER = base64.b64encode(b"[ATTACHMENT REMOVED]").decode("ascii")
-_GENERALIZING = frozenset({E.AGE, E.DOB, E.VILLAGE, E.TEHSIL, E.PIN})
+_GENERALIZING = frozenset({E.AGE, E.DOB, E.VILLAGE, E.TEHSIL, E.PIN, E.DIAGNOSIS})
 _DIGIT_PRESERVING = frozenset({E.AGE, E.DATE, E.DOB, E.PIN})
 # Where the pseudonym goes when a record has no patient name to replace.
 _CARRIERS = (E.PATIENT_NAME, E.MRN, E.AADHAAR, E.ABHA_NUMBER, E.INSURANCE_ID, E.PHONE,
@@ -123,6 +124,8 @@ class Redactor:
     def _replacement(self, segment: Segment, mention: Mention,
                      context: PatientContext) -> str | None:
         etype = mention.etype
+        if etype is E.DIAGNOSIS:
+            return CODE_REPLACEMENT if mention.data == "code" else NAME_REPLACEMENT
         if segment.constrained:
             return "redacted"
         if etype in NAME_TYPES:

@@ -42,7 +42,7 @@ _MIN_ID_LENGTH = 7
 _MAX_ID_CHUNKS = 7
 
 _CHUNK = re.compile(r"[A-Za-z0-9]+")
-_WORD = re.compile(r"[A-Za-z0-9]+|[ऀ-ॣॱ-ॿ]+")
+_WORD = re.compile(r"[A-Za-z0-9]+|[\u0900-\u0963\u0971-\u097f]+")
 _ID_GAP = re.compile(r"^[ \t\-./()_+]{0,3}$")
 _NAME_GAP = re.compile(r"^(?:[ \t_\-]{1,2}|\. ?)$")
 _PHRASE_GAP = re.compile(r"^[ \t.,\-/#:]{0,3}$")

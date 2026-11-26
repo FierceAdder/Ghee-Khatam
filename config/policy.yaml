@@ -1,12 +1,16 @@
 # Privacy rules. Flat "key: value" lines only; unknown keys stop the run.
 
-age_band_years: 5          # ages become bands such as 45-49 (the band contains the true age)
+age_band_years: 5          # narrowest age band, such as 45-49 (a band always holds the true age)
+age_band_max_years: 15     # widest band used when too many patients would stand out (see below)
+min_group_size: 5          # a patient should share district, sex and age band with this many people
+registry_per_patient: 4    # assumed people in the area for each patient in the data
+small_group_percent: 20    # widen the bands until at most this share of patients is in a smaller group
 age_top_code: 90           # ages from here upwards are written as "90+", and the DOB is removed
 date_shift_max_days: 180   # every date of one patient moves by the same secret offset (never 0)
 dob_mode: remove           # remove = no birth date | shift = same offset as visit dates | year
                            # (shift and year both reveal the birth year, undoing the age bands)
+rare_diagnosis_patients: 1 # a diagnosis held by this many patients or fewer is suppressed (0 = off)
 pin_prefix_digits: 3       # PIN 123456 becomes 123***
 phone_hub_groups: 3        # a phone shared by this many different people links nobody
-min_group_size: 5          # reserved for the adaptive k-anonymity step (Phase 6)
 max_file_mb: 200           # larger files are quarantined to protect the memory budget
 max_json_depth: 200        # deeper JSON is quarantined

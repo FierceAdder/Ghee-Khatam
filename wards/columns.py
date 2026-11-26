@@ -16,7 +16,7 @@ from wards.model import FieldType as F
 from wards.textview import TextView
 
 _CAMEL = re.compile(r"(?<=[a-z0-9])(?=[A-Z])|(?<=[A-Z])(?=[A-Z][a-z])")
-_SEPARATORS = re.compile(r"[^0-9a-zऀ-ॣॱ-ॿ]+")
+_SEPARATORS = re.compile(r"[^0-9a-z\u0900-\u0963\u0971-\u097f]+")
 
 
 @lru_cache(maxsize=65_536)
@@ -153,7 +153,7 @@ _SHAPES: tuple[tuple[F, re.Pattern[str]], ...] = (
 _ADDRESS_MARKER = re.compile(
     r"(?i)\b(h\.?\s?no|house|makan|mohalla|tehsil|distt?\.|vill\.|gram|near|ward)\b"
     r"|मकान|मोहल्ला|तहसील|जिला|ग्राम")
-_NAME_TOKEN = re.compile(r"[A-Za-z]+\.?|[ऀ-ॣॱ-ॿ]+")
+_NAME_TOKEN = re.compile(r"[A-Za-z]+\.?|[\u0900-\u0963\u0971-\u097f]+")
 
 
 def _looks_like_name(value: str, lexicon: Lexicon) -> bool:

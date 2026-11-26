@@ -18,22 +18,30 @@ DOB_MODES = ("shift", "year", "remove")
 @dataclass(frozen=True)
 class Policy:
     age_band_years: int = 5
+    age_band_max_years: int = 15
+    min_group_size: int = 5
+    registry_per_patient: int = 4
+    small_group_percent: int = 20
     age_top_code: int = 90
     date_shift_max_days: int = 180
     dob_mode: str = "remove"
+    rare_diagnosis_patients: int = 1
     pin_prefix_digits: int = 3
     phone_hub_groups: int = 3
-    min_group_size: int = 5
     max_file_mb: int = 200
     max_json_depth: int = 200
 
     def validate(self) -> "Policy":
         checks = {
             "age_band_years": 1 <= self.age_band_years <= 20,
+            "age_band_max_years": self.age_band_years <= self.age_band_max_years <= 20,
+            "registry_per_patient": 1 <= self.registry_per_patient <= 1000,
+            "small_group_percent": 0 <= self.small_group_percent <= 100,
             "age_top_code": 60 <= self.age_top_code <= 120,
             # Above 365 days a "shifted" DOB would stop being informative.
             "date_shift_max_days": 1 <= self.date_shift_max_days <= 365,
             "dob_mode": self.dob_mode in DOB_MODES,
+            "rare_diagnosis_patients": 0 <= self.rare_diagnosis_patients <= 20,
             "pin_prefix_digits": 0 <= self.pin_prefix_digits <= 3,
             "phone_hub_groups": 2 <= self.phone_hub_groups <= 100,
             "min_group_size": 1 <= self.min_group_size <= 100,

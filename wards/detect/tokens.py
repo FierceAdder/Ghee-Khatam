@@ -9,7 +9,7 @@ from dataclasses import dataclass
 from wards.lexicon import Lexicon
 from wards.normalize import is_devanagari
 
-_TOKEN = re.compile(r"[A-Za-z]+(?:['’][A-Za-z]+)*|[ऀ-ॣॱ-ॿ]+")
+_TOKEN = re.compile(r"[A-Za-z]+(?:['’][A-Za-z]+)*|[\u0900-\u0963\u0971-\u097f]+")
 # Between two words of one name: one space, a hyphen, or the dot of an initial.
 _JOIN = re.compile(r"^(?: |-)$")
 _DOT_JOIN = re.compile(r"^\. ?$")

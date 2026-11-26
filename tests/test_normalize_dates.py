@@ -205,3 +205,36 @@ def test_birth_date_modes(policy, mode, expected):
 
     privacy = Privacy(replace(policy, dob_mode=mode), Secret(b"k"))
     assert privacy.date_of_birth(only("01/01/1990"), "dmy", 5, 2026, False) == expected
+
+
+def test_large_populations_keep_narrow_bands(privacy):
+    crowd = [("Mainpuri", sex, age) for sex in "MF" for age in range(20, 70)
+             for _ in range(3)]
+    assert privacy.choose_band_width(crowd) == 5
+    assert privacy.age_band(47) == "45-49"
+
+
+def test_sparse_populations_widen_bands(privacy, policy):
+    loners = [(f"District{i}", "F", 20 + i) for i in range(30)]
+    assert privacy.choose_band_width(loners) == policy.age_band_max_years
+    low, high = map(int, privacy.age_band(47).split("-"))
+    assert low <= 47 <= high and high - low + 1 == policy.age_band_max_years
+
+
+def test_bands_widen_only_as_far_as_needed(privacy):
+    # pairs of patients five years apart share a group only in ten-year bands
+    pairs = [("Mainpuri", "F", base + offset) for base in range(20, 80, 10)
+             for offset in (1, 6)]
+    assert privacy.choose_band_width(pairs) == 10
+
+
+def test_no_demographics_keeps_the_narrowest_band(privacy, policy):
+    assert privacy.choose_band_width([]) == policy.age_band_years
+
+
+def test_bands_stop_below_the_top_code(policy):
+    from dataclasses import replace
+
+    privacy = Privacy(replace(policy, age_band_max_years=20), Secret(b"k"))
+    privacy.band_width = 20
+    assert privacy.age_band(85) == "80-89" and privacy.age_band(93) == "90+"

@@ -25,26 +25,26 @@ _HOUSE = _compile(
     r"मकान(?:[ \t]*(?:नं\.?|न\.|संख्या|नंबर))?|घर(?:[ \t]*(?:नं\.?|संख्या|नंबर)))"
     r"[ \t]*[:#\-]?[ \t]*[A-Za-z]?[\-/]?\d+(?:[/\-][A-Za-z0-9]+)*[A-Za-z]?(?![A-Za-z0-9])")
 
-_PLACE_WORD = r"(?:[A-Z][A-Za-z]*|[ऀ-ॣॱ-ॿ]+|\d+)"
+_PLACE_WORD = r"(?:[A-Z][A-Za-z]*|[\u0900-\u0963\u0971-\u097f]+|\d+)"
 _PLACE = rf"{_PLACE_WORD}(?:[ \t]{_PLACE_WORD}){{0,3}}"
 
 _LANDMARK_START = _compile(
     r"^(?:near(?:by)?|nr\.|opp\.?|opposite|behind|beside|besides|next[ \t]+to|adjacent(?:[ \t]+to)?|"
     r"in[ \t]+front[ \t]+of|b/h|close[ \t]+to)(?![A-Za-z]).+")
-_LANDMARK_HINDI = _compile(r".*(?:के[ \t]*(?:पास|पीछे|सामने|निकट|बगल)(?![ऀ-ॿ])).*")
+_LANDMARK_HINDI = _compile(r".*(?:के[ \t]*(?:पास|पीछे|सामने|निकट|बगल)(?![\u0900-\u097f])).*")
 _TEHSIL = _compile(r"^(?:Tehsil|Tahsil|Teh\.|Taluka?|Block|तहसील|ब्लॉक)[ \t]*[:\-]?[ \t]*(?P<v>.+)$")
 _DISTRICT = _compile(r"^(?:Distt\.?|District|Dist\.?|Zilla|Zila|Jila|जिला|ज़िला|जनपद)"
                      r"[ \t]*[:\-]?[ \t]*(?P<v>.*)$")
 _VILLAGE = _compile(
     r"^(?:Vill(?:age)?\.?(?:[ \t]*(?:&|and)[ \t]*(?:Post|P\.?O\.?))?|Gram(?![ \t]+Panchayat)|Gaon|"
-    r"R[ \t]*/[ \t]*o|ग्राम(?![ \t]+पंचायत)|गांव|गाँव)(?![A-Za-zऀ-ॿ])[ \t]*[:\-]?[ \t]*(?P<v>.+)$")
+    r"R[ \t]*/[ \t]*o|ग्राम(?![ \t]+पंचायत)|गांव|गाँव)(?![A-Za-z\u0900-\u097f])[ \t]*[:\-]?[ \t]*(?P<v>.+)$")
 _POST = _compile(r"^(?:Post(?:[ \t]*Office)?|P\.[ \t]?O\.|P\.[ \t]?S\.|Thana|(?:PO|PS)(?=[ \t])|डाकघर|पोस्ट|थाना)"
                  r"[ \t]*[:\-]?[ \t]*(?P<v>.+)$")
 _WARD = _compile(r"(?<![A-Za-z])(?:Ward|वार्ड)[ \t]*(?:No\.?|नं\.?)?[ \t]*[:\-#]?[ \t]*\d+(?![\d(])")
 _LOCALITY = _compile(
-    r"(?<![A-Za-zऀ-ॿ])(?:Mohalla|Muhalla|Mohallah|Nagar|Tola|Basti|Colony|Gali|Lane|Road|"
+    r"(?<![A-Za-z\u0900-\u097f])(?:Mohalla|Muhalla|Mohallah|Nagar|Tola|Basti|Colony|Gali|Lane|Road|"
     r"Street|Chowk|Bazaa?r|Market|Sector|Enclave|Vihar|Kunj|Marg|Para|Pura|Patti|Mandi|"
-    r"मोहल्ला|मुहल्ला|टोला|बस्ती|कॉलोनी|गली|मार्ग|नगर|चौक)(?![A-Za-zऀ-ॿ])")
+    r"मोहल्ला|मुहल्ला|टोला|बस्ती|कॉलोनी|गली|मार्ग|नगर|चौक)(?![A-Za-z\u0900-\u097f])")
 _PIN = re.compile(r"(?<![\d\-/])[1-9]\d{2}[ ]?\d{3}(?![\d\-/])")
 _RELATION_PREFIX = _compile(r"^(?:[CSDWH][ \t]*/[ \t]*O|care[ \t]+of)(?![A-Za-z])\.?[ \t]*[:\-]?[ \t]*")
 _KEEP = _compile(r"^(?:Uttar[ \t]+Pradesh|U\.?P\.?|Yugaantar[ \t]+Pradesh|India|IN|Bharat|"
@@ -60,12 +60,12 @@ _RESIDENT_OF = _compile(
     r"(?:Distt?\.?|District|जिला|ज़िला)[ \t]*[:\-]?[ \t]*[A-Za-z\u0900-\u097f]+)")
 _ADDRESS_LINE = _compile(
     r"(?:(?<![A-Za-z])(?:Permanent[ \t]+|Present[ \t]+|Residential[ \t]+)?(?:Address|Addr\.?|R/o)"
-    r"(?![A-Za-z])|पता(?![ऀ-ॿ])|निवास(?:[ \t]+स्थान)?)(?:[ \t]*\([^)\n]*\))?[ \t]*[:\-–][ \t]*"
+    r"(?![A-Za-z])|पता(?![\u0900-\u097f])|निवास(?:[ \t]+स्थान)?)(?:[ \t]*\([^)\n]*\))?[ \t]*[:\-–][ \t]*"
     r"(?P<body>[^\n]+)")
 _PIN_LABEL = _compile(r"(?:(?<![A-Za-z])(?:PIN(?:[ \t]*Code)?|Pincode|Postal[ \t]*Code|ZIP)|पिन(?:[ \t]*कोड)?)"
                       r"[ \t]*[:\-]?[ \t]*(?P<v>[1-9]\d{2}[ ]?\d{3})(?!\d)")
 _VILLAGE_LABEL = _compile(
-    r"(?:(?<![A-Za-z])(?:Village|Vill\.|Gram|Gaon)(?![A-Za-z])|(?:ग्राम|गांव|गाँव)(?![ऀ-ॿ]))"
+    r"(?:(?<![A-Za-z])(?:Village|Vill\.|Gram|Gaon)(?![A-Za-z])|(?:ग्राम|गांव|गाँव)(?![\u0900-\u097f]))"
     r"(?![ \t]+(?:Panchayat|पंचायत))[ \t]*[:\-]?[ \t]*(?P<v>(?-i:" + _PLACE + r"))")
 _TEHSIL_LABEL = _compile(r"(?:(?<![A-Za-z])(?:Tehsil|Tahsil|Taluka?)(?![A-Za-z])|तहसील)"
                          r"[ \t]*[:\-]?[ \t]*(?P<v>(?-i:" + _PLACE + r"))")

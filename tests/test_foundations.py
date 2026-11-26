@@ -22,7 +22,7 @@ def test_plain_ascii_view_is_the_identity():
 
 
 @pytest.mark.parametrize("disguised, plain", [
-    ("Kal​avati", "Kalavati"),                       # zero-width space
+    ("Kal\u200bavati", "Kalavati"),                       # zero-width space
     ("९८१२३४५६७०", "9812345670"),                         # Devanagari digits
     ("Ｋａｌａ", "Kala"),                                    # full width (NFKC)
     ("Kаlа", "Kala"),                           # Cyrillic homoglyph
@@ -43,10 +43,10 @@ def test_view_spans_map_back_to_the_original():
 
 
 def test_zero_width_characters_stay_inside_the_mapped_span():
-    source = "x Kal​avati y"
+    source = "x Kal\u200bavati y"
     view = TextView.of(source)
     start = view.text.index("Kalavati")
-    assert view.source_text(start, start + len("Kalavati")) == "Kal​avati"
+    assert view.source_text(start, start + len("Kalavati")) == "Kal\u200bavati"
 
 
 def test_surrogate_pairs_decode_to_one_character():

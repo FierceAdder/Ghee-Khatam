@@ -39,7 +39,7 @@ _DIGIT_MATCH = {"digits", "digits_exact"}
 
 def norm(text: str) -> str:
     text = unicodedata.normalize("NFKC", text)
-    return " ".join("".join(c for c in text if c not in "​‌‍﻿")
+    return " ".join("".join(c for c in text if c not in "\u200b\u200c\u200d\ufeff")
                     .casefold().split())
 
 
@@ -70,7 +70,7 @@ class Files:
             except UnicodeDecodeError:
                 text = raw.decode("cp1252", errors="replace")
             parsed: object = None
-            if spec.get("format") == "csv":
+            if spec.get("format") in ("csv", "tsv"):
                 parsed = list(csv.reader(io.StringIO(text, newline=""),
                                          delimiter=spec.get("delimiter") or ","))
             elif text.lstrip().startswith(("{", "[")):
@@ -111,9 +111,9 @@ def occurrences(key: str, text: str, digits: bool) -> int:
     if digits:
         pattern = r"[ \-./()]*".join(map(re.escape, key))
         return len(re.findall(pattern, text))
-    if re.fullmatch(r"[\wऀ-ॿ]+", key):
-        return len(re.findall(rf"(?<![a-z0-9ऀ-ॿ]){re.escape(key)}"
-                              rf"(?![a-z0-9ऀ-ॿ])", text))
+    if re.fullmatch(r"[\w\u0900-\u097f]+", key):
+        return len(re.findall(rf"(?<![a-z0-9\u0900-\u097f]){re.escape(key)}"
+                              rf"(?![a-z0-9\u0900-\u097f])", text))
     return text.count(key)
 
 

@@ -19,12 +19,14 @@ from pathlib import Path
 
 from wards import dates, documents, ingest, validate, write
 from wards.audit import Auditor
+from wards.clinical import ConditionPlan
 from wards.detect import Detector, resolve
 from wards.errors import ConfigError, QuarantineError
 from wards.knowledge import Knowledge, id_shape
 from wards.lexicon import Lexicon
 from wards.link import Linker, record_names
 from wards.model import Channel, DocKind, Document, Segment
+from wards.model import QUASI_TYPES
 from wards.model import EntityType as E
 from wards.model import FieldType as F
 from wards.policy import Policy
@@ -36,7 +38,6 @@ from wards.sweep import NameBag, NameSweeper
 
 DEFAULT_REFERENCE_YEAR = 2025
 _RESERVE_BYTES = 16 << 20        # freed on failure so that clean-up still has memory
-_QUASI = frozenset({E.DATE, E.AGE})
 _COUNT_NAMES = ("files_total", "files_sanitized", "files_quarantined", "records_processed",
                 "identifiers_detected", "records_linked", "records_generalized",
                 "records_suppressed", "records_quarantined")
@@ -119,10 +120,12 @@ class Pipeline:
         contexts, sweeper = self._link(states, knowledge, reference_year)
         self.log.event("linked", records=len(contexts),
                        patients=len({c.pseudonym for c in contexts.values() if c.pseudonym}))
+        self.log.event("privacy", age_band_years=self.privacy.band_width)
 
+        conditions = self._plan_conditions(states, contexts)
         redactor = Redactor(self.lexicon, self.privacy, knowledge)
         self._each(states, "redact", lambda s: self._redact(
-            s, redactor, sweeper, contexts, reference_year, auditor))
+            s, redactor, sweeper, conditions, contexts, reference_year, auditor))
         repairs: Counter = Counter()
         self._each(states, "audit", lambda s: repairs.update(found=auditor.repair(s.doc)))
         self._name_outputs(states, knowledge, sweeper, auditor)
@@ -174,7 +177,7 @@ class Pipeline:
     def _apply_knowledge(self, state: FileState, knowledge: Knowledge,
                          auditor: Auditor) -> None:
         for record in state.doc.records:
-            personal = any(m.etype not in _QUASI for _, m in record.mentions())
+            personal = any(m.etype not in QUASI_TYPES for _, m in record.mentions())
             for segment in record.segments:
                 self._merge(segment, knowledge.sweep(segment, personal))
         for segment in state.doc.file_segments():
@@ -283,15 +286,33 @@ class Pipeline:
         for record_key, context in contexts.items():
             context.top_coded = oldest[context.pseudonym or record_key] \
                 >= self.policy.age_top_code
+        self.privacy.choose_band_width(_demographics(evidence, assigned, contexts))
         return contexts, sweeper
 
+    def _plan_conditions(self, states: list[FileState],
+                         contexts: dict[str, PatientContext]) -> ConditionPlan:
+        plan = ConditionPlan(self.policy.rare_diagnosis_patients)
+        linked = []
+        for state in states:
+            if state.alive:
+                plan.learn(state.doc)
+                linked += [(contexts[r.key].pseudonym, r) for r in state.doc.records
+                           if contexts[r.key].pseudonym]
+        plan.decide(linked)
+        self.log.event("conditions", suppressed_codes=len(plan.rare))
+        return plan
+
     def _redact(self, state: FileState, redactor: Redactor, sweeper: NameSweeper,
-                contexts: dict[str, PatientContext], reference_year: int,
-                auditor: Auditor) -> None:
+                conditions: ConditionPlan, contexts: dict[str, PatientContext],
+                reference_year: int, auditor: Auditor) -> None:
         for record in state.doc.records:
             context = contexts[record.key]
+            personal = context.pseudonym is not None \
+                or any(m.etype not in QUASI_TYPES for _, m in record.mentions())
             for segment in record.segments:
                 self._merge(segment, sweeper.sweep(segment, context.bag))
+                if personal:         # documents about nobody keep their medical content
+                    self._merge(segment, conditions.mentions(segment))
             redactor.record(record, context)
         # File-level values belong to no patient: dates stay, but a birth date has no
         # offset to hide behind, so it is always removed.
@@ -366,7 +387,7 @@ class Pipeline:
         segment.mentions = self.detector.detect_segment(segment)
         self._merge(segment, knowledge.sweep(segment, False))
         self._merge(segment, sweeper.sweep(segment, None))
-        if not any(m.etype not in _QUASI for m in segment.mentions) \
+        if not any(m.etype not in QUASI_TYPES for m in segment.mentions) \
                 and auditor.is_clean(stem, path=True):
             return part
         token = self.secret.mac("filename", f"{state.item.sha256}\x00{prefix}" if is_file
@@ -408,7 +429,7 @@ class Pipeline:
             "files_quarantined": len(files) - sanitized,
             "records_processed": processed,
             "identifiers_detected": sum(n for kind, n in redactor.counts.items()
-                                        if kind not in (E.DATE.value, E.AGE.value)),
+                                        if kind not in {t.value for t in QUASI_TYPES}),
             "records_linked": linked,
             "records_generalized": generalized,
             "records_suppressed": 0,
@@ -416,6 +437,25 @@ class Pipeline:
         }
         return RunResult(files=files, records=records, counts=counts,
                          entities=dict(redactor.counts), seconds=seconds)
+
+
+def _demographics(evidence, assigned: dict[int, str],
+                  contexts: dict[str, PatientContext]) -> list[tuple[str, str, int]]:
+    """``(district, sex, age)`` of every linked patient for whom all three are known."""
+    district: dict[str, set] = defaultdict(set)
+    sex: dict[str, set] = defaultdict(set)
+    age: dict[str, set] = defaultdict(set)
+    for index, item in enumerate(evidence):
+        patient = assigned.get(index)
+        if not patient:
+            continue
+        context = contexts[item.record.key]
+        if context.district is not None:
+            district[patient].add(context.district.latin)
+        sex[patient] |= item.summary.sexes
+        age[patient] |= {context.reference_year - high for _, high in item.summary.births}
+    return [(min(district[p]), min(sex[p]), sorted(age[p])[len(age[p]) // 2])
+            for p in sorted(age) if district[p] and sex[p] and age[p]]
 
 
 def _natural(loc: str) -> list:

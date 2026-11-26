@@ -98,7 +98,8 @@ run.
 | Patient name | pseudonym `PSN-XXXXXX` (HMAC-SHA256 keyed with `RAKSHA_SECRET`) or `[NAME]` |
 | Relatives, phones, IDs, e-mail | typed tokens; numbers in JSON become `0` |
 | Dates | shifted by a per-patient offset of 1 to 180 days, in the original format |
-| Age | 5-year band; `90+` from 90, and the birth date is removed |
+| Age | band of 5 to 15 years, chosen once per release from how crowded district-and-sex groups are; `90+` from 90 |
+| Rare diagnosis | a code held by one patient becomes `R69` and its names `[CONDITION]`, in every patient record; documents about no one keep it |
 | Birth date | `[DOB]`; a FHIR `birthDate` is dropped. `dob_mode` can be `shift` or `year`, but both reveal the birth year |
 | Village / tehsil / PIN | district / `[TEHSIL]` / 3-digit prefix |
 | Medicines, doses, vitals, labs, diagnoses, doctors, wards | unchanged |
@@ -119,7 +120,13 @@ run.
 ```bash
 make dev SHOW=20
 python3 tools/eval_stage.py --output my_output --show 20
+python3 tools/attacker.py --output my_output [--other release_with_another_secret]
+python3 tools/utility.py --output my_output
+python3 tools/tune.py age_band_max_years=10,15 rare_diagnosis_patients=0,1 --variants
 ```
+
+`attacker.py` replays the published attacks and `utility.py` estimates the published
+utility formula. Both are our own reading of the documents, not the official evaluator.
 
 `eval_stage.py` counts leaks per identifying token, checks that each true patient's dates
 moved by a single offset, that generalised fields stay truthful, and that every claimed
@@ -133,8 +140,10 @@ in [SCORES.md](SCORES.md).
 - A name in free text with no label, relation, honorific or similar context, that is in no
   gazetteer and appears nowhere else in the dataset, is missed.
 - All-lower-case names in prose are only found when another record already revealed them.
-- There is no adaptive k-anonymity yet: a rare diagnosis combined with an exact stay
-  length stays identifiable (planned, Phase 6).
+- The targeted attack still succeeds about 45 % of the time on practice data: diagnoses
+  shared by two or three patients are kept for research value.
+- The privacy settings were chosen on a practice set of 48 patients. The age-band rule
+  adapts to larger data, but that behaviour has not been tested against a real registry.
 - Birth dates are removed so they cannot undo the age bands. This gives up the utility
   credit the scorer awards for a generalised birth date.
 - A birth date that is unlabelled everywhere in a patient's records is treated as an

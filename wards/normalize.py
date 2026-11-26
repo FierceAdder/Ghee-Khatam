@@ -34,7 +34,7 @@ _NUKTA_MARK = "़"
 _NASALS = {"ं", "ँ"}
 _VISARGA = "ः"
 
-DEVANAGARI = re.compile(r"[ऀ-ॿ]")
+DEVANAGARI = re.compile(r"[\u0900-\u097f]")
 
 
 def is_devanagari(text: str) -> bool:

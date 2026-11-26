@@ -31,18 +31,20 @@ score would notice.
 
 | ID | Change to test | How to measure | Keep if | Status |
 |---|---|---|---|---|
-| T-10 | Our own replay of attacks A1-A7 | Compare with the published readings (passthrough: A4 99.3 %, A5 97.1 %) | Raw-input results are close to those readings | planned (7) |
-| T-11 | Utility estimate that follows the published formula | Cross-check with `check_dev.py` | Moves in the same direction as the toolkit's numbers | planned (7) |
-| T-12 | Roll rare diagnosis codes up the ICD-10 ladder, for every holder of the code | Attack replay plus utility estimate, for k = 2, 3, 4, 5 | Total score (25 x privacy + 20 x utility) rises | planned (7) |
-| T-13 | Generalise rare procedures the same way | Same | Total rises | planned (7) |
-| T-14 | Move one date by a day or two for visits that stay unique on (condition, stay length) | Same, with jitter 0, 1, 2 days | Total rises after counting lost interval accuracy | planned (7) |
+| T-10 | Our own replay of attacks A1-A7 | Compare with the published readings (passthrough: A4 99.3 %, A5 97.1 %) | Raw-input results are close to those readings | kept: raw input A4 0.979 (organisers 0.979), A5 1.000 (0.9999), A2/A3 0.67 (0.92, still low) |
+| T-11 | Utility estimate that follows the published formula | Cross-check with `check_dev.py` | Moves in the same direction as the toolkit's numbers | kept: practice release 0.956. An estimate; probe weights are unpublished |
+| T-12 | Roll rare diagnosis codes up the ICD-10 ladder, for every holder of the code | Attack replay plus utility estimate, for k = 2, 3, 4, 5 | Total score (25 x privacy + 20 x utility) rises | kept at one patient: +0.22. Two, three and five patients lose 0.1, 0.4 and 0.9. Chapter ranges gained nothing |
+| T-13 | Generalise rare procedures the same way | Same | Total rises | rejected: no change in the targeted attack, small utility loss |
+| T-14 | Move one date by a day or two for visits that stay unique on (condition, stay length) | Same, with jitter 0, 1, 2 days | Total rises after counting lost interval accuracy | rejected: removing the stay signal entirely gains at most 0.18, less than the interval accuracy it would cost |
 | T-15 | Give a still-exposed visit its own pseudonym | Same, plus linking recall | Total rises including the identity score | open |
-| T-16 | Top-code long stays | Stay-length distribution and attack replay | Total rises | open |
-| T-17 | Attacker variants: rarity cut-off, confidence threshold, stay-length tolerance | Re-run T-12 to T-14 under each variant | The chosen setting is good under all of them, not only the published one | planned (7) |
-| T-18 | Wider age bands or district-only location for exposed patients | Attack replay | Total rises. Expected small: A5 does not use age or location | open |
-| T-19 | Birth-date handling: `remove` (current) against `shift` | Attack replay A2-A4 | `remove` stays only if the privacy gain exceeds the lost generalisation credit | planned (7) |
+| T-16 | Top-code long stays | Stay-length distribution and attack replay | Total rises | rejected with T-14: the same upper bound applies |
+| T-17 | Attacker variants: rarity cut-off, confidence threshold, stay-length tolerance | Re-run T-12 to T-14 under each variant | The chosen setting is good under all of them, not only the published one | kept: one-patient suppression stays best under rarity 5, confidence 0.3 and stay tolerance 1 |
+| T-18 | Wider age bands or district-only location for exposed patients | Attack replay | Total rises. Expected small: A5 does not use age or location | kept: widest band 15 gains 2.1 over 5 (A4 0.57 to 0.26); 20 adds 0.09. My expectation of a small effect was wrong |
+| T-19 | Birth-date handling: `remove` (current) against `shift` | Attack replay A2-A4 | `remove` stays only if the privacy gain exceeds the lost generalisation credit | kept `remove`: 39.55 against 34.95 for `shift` (A4 0.26 against 0.87) |
 | T-20 | Clamp shifted dates to the data window (shift-and-truncate) and check weekday patterns | Check whether edge dates bound the offset | No offset can be bounded from edge dates | open |
 | T-21 | Choose a transformation per patient (the document's method) | Not to be built | Rejected: order-dependent, and the pattern of changes identifies records | rejected |
+| T-22 | Choose the age-band width from the data (groups by district and sex, assumed registry density) | Practice picks 15; unit cases with large populations pick 5 | Matches the measured best on practice and keeps narrow bands on large data | kept on practice; the large-data behaviour is untested against a real registry |
+| T-23 | Remove impossible ages (negative values in the data) instead of releasing them | Count them; check the utility estimate | The unique value is gone | kept: one such row in the practice data; costs one generalisation field |
 
 ## Unseen formats and detection (proposed change 4)
 
@@ -89,8 +91,8 @@ The constraint-first union-find already exists. These refine it.
 
 | ID | Question | Why it matters | Status |
 |---|---|---|---|
-| Q-01 | How much clinical utility does each rare-code rollup cost? | Sets how far T-12 can go | planned (7) |
+| Q-01 | How much clinical utility does each rare-code rollup cost? | Sets how far T-12 can go | answered: about 0.01 of utility for the five one-patient codes |
 | Q-02 | How large are the hidden datasets compared with the roughly 240 MB where memory would run out? | Decides how urgent T-50 to T-52 are | open (ask organisers) |
 | Q-03 | Does the scorer inspect a leftover staging folder, and how does it treat a non-zero exit? | Decides failure behaviour | open (ask organisers) |
 | Q-04 | How much of the drop on unseen formats can label-free cues recover? | Ranks detection work | planned (8) |
-| Q-05 | How accurate is our attack replay compared with the real attacker? | Limits how far to trust privacy tuning | planned (7) |
+| Q-05 | How accurate is our attack replay compared with the real attacker? | Limits how far to trust privacy tuning | partly answered: matches on A4 and A5 for raw input; A2/A3 reads low |

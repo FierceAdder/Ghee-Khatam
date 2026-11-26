@@ -30,7 +30,7 @@ _SHAPED_TYPES = (E.MRN, E.INSURANCE_ID)
 
 def place_key(text: str) -> str:
     """Cross-script key for a village or tehsil: रामपुर matches Rampur."""
-    words = re.findall(r"[A-Za-z]+|[ऀ-ॣॱ-ॿ]+", text)
+    words = re.findall(r"[A-Za-z]+|[\u0900-\u0963\u0971-\u097f]+", text)
     parts = (skeleton(transliterate(w) if is_devanagari(w) else w)[0] for w in words)
     return "".join(parts)
 
@@ -128,7 +128,7 @@ class Knowledge:
             text = segment.view.text
             for m in re.finditer(
                     r"(?i)(?:distt?\.?|district|जिला|ज़िला|ज़िला)[ \t]*[:\-]?[ \t]*"
-                    r"([A-Za-zऀ-ॿ]+(?:[ \t][A-Za-zऀ-ॿ]+)?)", text):
+                    r"([A-Za-z\u0900-\u097f]+(?:[ \t][A-Za-z\u0900-\u097f]+)?)", text):
                 words = m.group(1).split()
                 for count in range(len(words), 0, -1):
                     found = self.lexicon.district(" ".join(words[:count]))
@@ -151,7 +151,7 @@ class Knowledge:
             body = "|".join(re.escape(v) for v in
                             sorted(self.villages.values(), key=lambda v: (-len(v), v)))
             self._village_regex = re.compile(
-                rf"(?<![A-Za-zऀ-ॿ])(?:{body})(?![A-Za-zऀ-ॿ])", re.IGNORECASE)
+                rf"(?<![A-Za-z\u0900-\u097f])(?:{body})(?![A-Za-z\u0900-\u097f])", re.IGNORECASE)
 
     # ------------------------------------------------------------------ sweeping
 

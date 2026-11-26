@@ -34,6 +34,7 @@ _PHONE_CHUNK = re.compile(r"\+?[\dXx*•(][\dXx*• \t\-().]{4,}[\dXx*•]")
 _MASK = re.compile(r"[Xx*•]{3,}")
 _LEADING_AGE = re.compile(r"^[ \t]*(?P<age>\d{1,3})(?:\.\d+)?(?![\d./])")
 _AGE_BAND = re.compile(r"^[ \t]*(?:\d{1,3}[ \t]*(?:-|–|to)[ \t]*\d{1,3}|\d{1,3}[ \t]*\+)")
+_NEGATIVE_AGE = re.compile(r"^[ \t]*[\-−–][ \t]*\d")
 _INFANT = re.compile(r"(?i)^[ \t]*\d{1,3}[ \t]*(?:months?|mon\b|mths?|weeks?|wks?|days?|माह|महीन|दिन|हफ)")
 _BASE64_RUN = re.compile(r"(?<![A-Za-z0-9+/=])[A-Za-z0-9+/]{24,}={0,2}(?![A-Za-z0-9+/=])")
 _HEX_RUN = re.compile(r"(?<![A-Za-z0-9])(?:[0-9a-fA-F]{2}){12,}(?![A-Za-z0-9])")
@@ -266,6 +267,8 @@ class Detector:
         if field in (F.AGE, F.AGE_SEX):
             if _AGE_BAND.match(value):
                 return []                       # already generalised
+            if _NEGATIVE_AGE.match(value):
+                return whole(E.AGE, data="invalid")  # impossible, and unique enough to identify
             m = _LEADING_AGE.match(text)
             if not m or int(m.group("age")) > MAX_AGE:
                 return None

@@ -7,6 +7,8 @@ same secret offset (so stay lengths are exact) and an age band always contains t
 from __future__ import annotations
 
 import datetime as dt
+from collections import Counter
+from collections.abc import Sequence
 
 from wards.dates import DateMatch
 from wards.policy import Policy
@@ -17,6 +19,31 @@ class Privacy:
     def __init__(self, policy: Policy, secret: Secret) -> None:
         self.policy = policy
         self.secret = secret
+        self.band_width = policy.age_band_years
+
+    def choose_band_width(self, patients: Sequence[tuple[str, str, int]]) -> int:
+        """One age-band width for the whole release, from ``(district, sex, age)`` triples.
+
+        Someone who knows the population looks for a person by district, sex and age. A
+        group is expected to hold ``registry_per_patient`` people for every patient seen in
+        it. Bands widen, for everyone alike, until few enough patients are in groups smaller
+        than ``min_group_size``. Large datasets keep narrow bands; small ones cannot.
+        """
+        policy = self.policy
+        widths = list(range(policy.age_band_years, policy.age_band_max_years + 1,
+                            policy.age_band_years))
+        if widths[-1] != policy.age_band_max_years:
+            widths.append(policy.age_band_max_years)
+        self.band_width = widths[-1] if patients else widths[0]
+        for width in widths:
+            groups = Counter((district, sex, min(age, policy.age_top_code) // width)
+                             for district, sex, age in patients)
+            exposed = sum(count for count in groups.values()
+                          if count * policy.registry_per_patient < policy.min_group_size)
+            if exposed * 100 <= policy.small_group_percent * len(patients):
+                self.band_width = width
+                break
+        return self.band_width
 
     def shift_days(self, key: str) -> int:
         """Uniform in ``[-max, -1] ∪ [1, max]``; the same key always moves the same way."""
@@ -52,7 +79,7 @@ class Privacy:
         return self.shifted(match, order, offset, reference_year)
 
     def age_band(self, age: int) -> str:
-        top, width = self.policy.age_top_code, self.policy.age_band_years
+        top, width = self.policy.age_top_code, self.band_width
         if age >= top:
             return f"{top}+"
         low = (age // width) * width

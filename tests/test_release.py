@@ -49,7 +49,7 @@ def kinds(auditor, text):
     ("seen: Wanrisha Kharbuli today", NAME),
     ("seen: WANRISHA  KHARBULI", NAME),
     ("file Kharbuli_Wanrisha", NAME),
-    ("Wan​risha Kharbuli", NAME),
+    ("Wan\u200brisha Kharbuli", NAME),
     ("Wānrishā Kharbulī", NAME),
     ("Wаnrisha Kharbuli", NAME),                    # Cyrillic a
     ("Wanrisha%20Kharbuli", NAME),

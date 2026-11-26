@@ -31,7 +31,7 @@ PSEUDONYM_LENGTH = 6
 
 # Order in which strong identifiers are applied: the most specific first.
 _STRONG_ORDER = ("aadhaar", "abha", "mrn", "ins", "pan", "email", "phone")
-_NAME_WORD = re.compile(r"[A-Za-z]+(?:['’][A-Za-z]+)*|[ऀ-ॣॱ-ॿ]+")
+_NAME_WORD = re.compile(r"[A-Za-z]+(?:['’][A-Za-z]+)*|[\u0900-\u0963\u0971-\u097f]+")
 _DEVA_HONORIFICS = frozenset(TextView.of(w).text for w in HONORIFICS_DEVANAGARI)
 _RELATION_SEX = re.compile(r"(?i)(?<![A-Za-z/])(?P<r>[sdw])[ \t]*/[ \t]*o(?![A-Za-z])")
 

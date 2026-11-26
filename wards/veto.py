@@ -25,11 +25,11 @@ _FACILITY_WORD = _compile(
     r"(?<![A-Za-z])(?:Hospital|Hospitals|Clinic|Sadan|Diagnostics|Diagnostic|Pathology|Pathlabs|"
     r"Labs|Lab|Laboratory|Laboratories|Institute|Centre|Center|Nursing[ \t]+Home|Trust|College|"
     r"Sansthan|Chikitsalaya|Dispensary|Imaging|Pharmacy|HOSPITAL|CLINIC|SADAN|DIAGNOSTICS|"
-    r"PATHOLOGY|LABS|LAB|अस्पताल|चिकित्सालय|क्लिनिक|सदन)(?![A-Za-zऀ-ॿ])")
+    r"PATHOLOGY|LABS|LAB|अस्पताल|चिकित्सालय|क्लिनिक|सदन)(?![A-Za-z\u0900-\u097f])")
 _PLACE_WORD = _compile(
     r"(?<![A-Za-z])(?:Mandir|Masjid|Gurudwara|Gurdwara|Church|School|Chowk|Tanki|Bhawan|Bhavan|"
-    r"Temple|Mosque|मंदिर|मस्जिद|गुरुद्वार[ाे]|भवन)(?![A-Za-zऀ-ॿ])")
-_PREVIOUS_WORD = _compile(r"([A-Z][A-Za-z.'\-]*|[ऀ-ॣॱ-ॿ]+)[ \t]$")
+    r"Temple|Mosque|मंदिर|मस्जिद|गुरुद्वार[ाे]|भवन)(?![A-Za-z\u0900-\u097f])")
+_PREVIOUS_WORD = _compile(r"([A-Z][A-Za-z.'\-]*|[\u0900-\u0963\u0971-\u097f]+)[ \t]$")
 
 _DEGREE = r"(?:MBBS|M\.B\.B\.S\.?|MD|M\.D\.|MS|M\.S\.|DM|DNB|MCh|BAMS|BHMS|BDS|MDS|DGO|DCH|DPM|DCP|FRCS|MRCP)"
 _QUALIFICATION = _compile(

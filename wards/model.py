@@ -39,6 +39,7 @@ class EntityType(str, Enum):
     DOB = "DOB"
     DATE = "DATE"
     AGE = "AGE"
+    DIAGNOSIS = "DIAGNOSIS"          # a condition rare enough to identify someone
 
 
 NAME_TYPES = frozenset({EntityType.PATIENT_NAME, EntityType.RELATIVE_NAME})
@@ -48,7 +49,7 @@ ID_TYPES = frozenset({
     EntityType.MRN, EntityType.INSURANCE_ID, EntityType.OTHER_ID,
 })
 # Quasi-identifiers that are transformed rather than being identifiers in themselves.
-QUASI_TYPES = frozenset({EntityType.DATE, EntityType.AGE})
+QUASI_TYPES = frozenset({EntityType.DATE, EntityType.AGE, EntityType.DIAGNOSIS})
 
 
 class Role(str, Enum):
