@@ -110,5 +110,9 @@ def build_report(files: Sequence[dict], counts: dict, entities: dict, seconds: f
     }
 
 
+def report_text(report: dict) -> str:
+    return json.dumps(report, indent=2) + "\n"
+
+
 def write_report(path: Path, report: dict) -> None:
-    write_text_file(path, json.dumps(report, indent=2) + "\n")
+    write_text_file(path, report_text(report))

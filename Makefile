@@ -31,10 +31,11 @@ build:
 secret-set:
 	@test -n "$$RAKSHA_SECRET" || { echo "set RAKSHA_SECRET first, e.g. export RAKSHA_SECRET=\$$(openssl rand -hex 32)"; exit 2; }
 
-# Removes only the three things a previous run wrote into OUTPUT.
+# Removes only what a previous run wrote into OUTPUT.
 clean-output:
 	@test -n "$(strip $(OUTPUT))" || { echo "OUTPUT must not be empty"; exit 2; }
-	rm -rf "$(OUTPUT_DIR)/sanitized" "$(OUTPUT_DIR)/report.json" "$(OUTPUT_DIR)/records.jsonl"
+	rm -rf "$(OUTPUT_DIR)/sanitized" "$(OUTPUT_DIR)/report.json" "$(OUTPUT_DIR)/records.jsonl" \
+		"$(OUTPUT_DIR)/logs/run.jsonl"
 	mkdir -p "$(OUTPUT_DIR)"
 
 run: secret-set clean-output

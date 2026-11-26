@@ -11,7 +11,7 @@ from __future__ import annotations
 
 import datetime as dt
 import re
-from collections import defaultdict
+from collections import Counter, defaultdict
 from collections.abc import Iterable
 from dataclasses import dataclass, field
 
@@ -146,25 +146,30 @@ class Summary:
         return min(max(0, a[0] - b[1], b[0] - a[1]) for a in self.births for b in other.births)
 
 
-def compatible(a: Summary, b: Summary) -> bool:
+def conflict(a: Summary, b: Summary) -> str | None:
+    """Why ``a`` and ``b`` cannot be one person (``sex``, ``aadhaar``…), or ``None``."""
     if a.sexes and b.sexes and not a.sexes & b.sexes:
-        return False
+        return "sex"
     for kind in ("aadhaar", "abha"):
         left, right = a.values(kind), b.values(kind)
         if left and right and not left & right:
-            return False
+            return kind
     if a.dobs and b.dobs and not a.dobs & b.dobs:
         # tolerate only a swapped day and month
         swapped = any(x.year == y.year and x.month == y.day and x.day == y.month
                       for x in a.dobs for y in b.dobs)
         if not swapped:
-            return False
+            return "dob"
     gap = a.birth_gap(b)
     if gap is not None and gap > 2:
-        return False
+        return "age"
     if a.names and b.names and not any(names_compatible(x, y) for x in a.names for y in b.names):
-        return False
-    return True
+        return "name"
+    return None
+
+
+def compatible(a: Summary, b: Summary) -> bool:
+    return conflict(a, b) is None
 
 
 @dataclass
@@ -204,6 +209,7 @@ class Linker:
         self.lexicon = lexicon
         self.secret = secret
         self.hub = phone_hub_groups
+        self.stats: Counter = Counter()     # decisions, for the log (counts only)
 
     # ------------------------------------------------------------------ evidence
 
@@ -298,19 +304,26 @@ class Linker:
 
     def link(self, evidence: list[Evidence]) -> dict[int, str]:
         """Pseudonym for each evidence index that identifies a patient."""
+        self.stats = Counter()
         evidence_order = sorted(range(len(evidence)), key=lambda i: evidence[i].record.key)
         usable = [i for i in evidence_order
                   if evidence[i].anchored and not evidence[i].ambiguous]
+        self.stats.update(records=len(evidence),
+                          ambiguous=sum(e.ambiguous for e in evidence),
+                          unanchored=sum(not e.anchored for e in evidence))
         clusters = Clusters(evidence)
         self._strong_tier(evidence, usable, clusters)
-        for tier in (self._name_dob_keys, self._name_relative_keys,
-                     self._name_village_keys, self._given_relative_keys):
-            self._unique_tier(evidence, usable, clusters, tier)
+        for name, tier in (("dob", self._name_dob_keys), ("relative", self._name_relative_keys),
+                           ("village", self._name_village_keys),
+                           ("given", self._given_relative_keys)):
+            self._unique_tier(evidence, usable, clusters, tier, name)
 
         members: dict[int, list[int]] = defaultdict(list)
         for index in usable:
             members[clusters.find(index)].append(index)
-        return self._pseudonyms(evidence, clusters, members)
+        assigned = self._pseudonyms(evidence, clusters, members)
+        self.stats.update(linked=len(assigned), patients=len(set(assigned.values())))
+        return assigned
 
     def _strong_tier(self, evidence: list[Evidence], usable: list[int],
                      clusters: Clusters) -> None:
@@ -324,21 +337,29 @@ class Linker:
                 if kind == "phone":
                     names = [n for i in group for n in evidence[i].summary.names]
                     if len(name_groups(names)) >= self.hub:
+                        self.stats["skipped_shared_phone"] += 1
                         continue        # a shared desk or family number identifies nobody
                     # records with a name first, so that anonymous ones join afterwards
                     group = sorted(group, key=lambda i: (not evidence[i].summary.names,
                                                          evidence[i].record.key))
                 representatives: list[int] = []
                 for i in group:
+                    refusal = None
                     for other in representatives:
                         a, b = clusters.find(i), clusters.find(other)
-                        if a == b or compatible(clusters.summary[a], clusters.summary[b]):
+                        reason = None if a == b else \
+                            conflict(clusters.summary[a], clusters.summary[b])
+                        if reason is None:
+                            self.stats["merged_strong"] += a != b
                             clusters.union(a, b)
                             break
+                        refusal = refusal or reason
                     else:
+                        if refusal:
+                            self.stats["refused_" + refusal] += 1
                         representatives.append(i)
 
-    def _unique_tier(self, evidence, usable, clusters: Clusters, keys_of) -> None:
+    def _unique_tier(self, evidence, usable, clusters: Clusters, keys_of, name: str) -> None:
         index: dict[tuple, list[int]] = defaultdict(list)
         for i in usable:
             for key in sorted(keys_of(clusters.summary[clusters.find(i)], evidence[i].summary)):
@@ -350,15 +371,19 @@ class Linker:
             summaries = [clusters.summary[r] for r in roots]
             pairs = [(a, b) for n, a in enumerate(summaries) for b in summaries[n + 1:]]
             if not all(compatible(a, b) for a, b in pairs):
+                self.stats["skipped_conflict"] += 1
                 continue                # the clue fits different people: do not guess
             if key[0] == "village":
                 gaps = [a.birth_gap(b) for a, b in pairs]
                 if any(g is None or g > 1 for g in gaps):
+                    self.stats["skipped_weak"] += 1
                     continue
             if key[0] == "given" and not all(
                     any(x.keys <= y.keys or y.keys <= x.keys for x in a.names for y in b.names)
                     for a, b in pairs):
+                self.stats["skipped_weak"] += 1
                 continue
+            self.stats["merged_" + name] += len(roots) - 1
             for root in roots[1:]:
                 clusters.union(roots[0], root)
 

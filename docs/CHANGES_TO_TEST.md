@@ -26,6 +26,9 @@ score would notice.
 | T-05 | Process hardening: no core dumps, PII-free failure report, memory reserve | Force `MemoryError` and `SIGTERM` | Staging removed, non-zero exit, no values printed | kept: forced MemoryError and SIGTERM exceptions release nothing. A real `SIGTERM` was later sent at four points of a 2,000-file run: exit 143, a failed report and no records each time |
 | T-06 | `PR_SET_DUMPABLE=0` | Run under a memory watchdog that reads `/proc` | The watchdog still works. Low security gain, unknown breakage risk | deferred |
 | T-07 | Restrictive `umask` on outputs | Read outputs as a different user | The scorer can still read them. Risky if it runs as another user | rejected for now |
+| T-08 | Structured run log with a closed schema, per-file counts at detail level, HMAC chain sealed to the report | Fuzz with identifying values and exception messages; leak scan of `logs/`; edit, remove and reorder lines | Nothing from the input is ever logged; every edit is detected | kept: 0 dropped events on practice data; schema refuses free text; all tamper cases detected |
+| T-09 | Self-scan the log before publishing; withhold it on a hit | Plant a name in the log | Log withheld, release still published | kept |
+| T-0A | Escalate when repairs are frequent (warn above a threshold) | Repairs per run on practice, scrambled and altered copies | A threshold that separates healthy from broken runs | open: practice runs need 0 repairs; files repaired are logged, no threshold chosen yet |
 
 ## Re-identification protection (proposed change 5)
 

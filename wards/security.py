@@ -12,15 +12,18 @@ from __future__ import annotations
 
 import hashlib
 import hmac
+import json
 import os
 import re
 import signal
 import sys
 import threading
+import time
 import warnings
 from collections.abc import Mapping
 from typing import TextIO
 
+from wards import logschema
 from wards.errors import ConfigError
 
 SECRET_ENV = "RAKSHA_SECRET"
@@ -66,10 +69,57 @@ class Secret:
 
 
 class SafeLog:
-    """Logger that cannot print input content."""
+    """Logger that cannot print input content.
 
-    def __init__(self, stream: TextIO | None = None) -> None:
+    ``record`` is the structured log: every event is checked against
+    :mod:`wards.logschema`, summary events are also printed, and :meth:`sealed` returns the
+    whole log as JSON Lines in which each line carries an HMAC over the previous one, so an
+    edited, removed or reordered line is detected by :func:`verify_log`.
+    """
+
+    MAX_LINES = 50_000
+
+    def __init__(self, stream: TextIO | None = None, level: str = logschema.SUMMARY,
+                 strict: bool = False) -> None:
+        if level not in (logschema.SUMMARY, logschema.DETAIL):
+            raise ConfigError("invalid_log_level")
         self._stream = stream
+        self.level = level
+        self.strict = strict           # tests: refuse; real runs: drop and count
+        self.dropped = 0
+        self.overflow = 0
+        self._lines: list[dict] = []
+        self._started = time.monotonic()
+
+    def record(self, event: str, **fields) -> None:
+        problem = logschema.check(event, fields)
+        if problem is not None:
+            if self.strict:
+                raise TypeError(f"log schema: {problem}")
+            self.dropped += 1
+            return
+        summary = logschema.level_of(event) == logschema.SUMMARY
+        if not summary and self.level != logschema.DETAIL:
+            return
+        if len(self._lines) >= self.MAX_LINES:
+            self.overflow += 1
+        else:
+            self._lines.append({"event": event,
+                                "t": round(time.monotonic() - self._started, 3), **fields})
+        if summary:
+            self._write(" ".join([event] + [f"{k}={fields[k]}" for k in sorted(fields)]))
+
+    def sealed(self, secret: "Secret", report_sha256: str) -> str:
+        """The log as JSON Lines, chained with HMACs and closed by a seal line."""
+        lines = [*self._lines, {"event": "log", "dropped": self.dropped,
+                                "overflow": self.overflow},
+                 {"event": "seal", "lines": len(self._lines) + 1, "report": report_sha256}]
+        out, previous = [], ""
+        for number, line in enumerate(lines):
+            body = _canonical(dict(line, seq=number))
+            previous = secret.mac("log", previous + "\n" + body).hex()[:32]
+            out.append(_canonical(dict(line, seq=number, mac=previous)))
+        return "\n".join(out) + "\n"
 
     def event(self, name: str, **numbers: int | float) -> None:
         parts = [_checked_token(name)]
@@ -96,6 +146,29 @@ class SafeLog:
     def _write(self, line: str) -> None:
         stream = self._stream if self._stream is not None else sys.stdout
         print(line, file=stream, flush=True)
+
+
+def _canonical(line: dict) -> str:
+    return json.dumps(line, sort_keys=True, separators=(",", ":"), ensure_ascii=True)
+
+
+def verify_log(text: str, secret: Secret) -> bool:
+    """True if every line of a sealed log is intact, in order, and nothing is missing."""
+    previous, lines = "", text.splitlines()
+    try:
+        for number, raw in enumerate(lines):
+            line = json.loads(raw)
+            mac = line.pop("mac")
+            if line.get("seq") != number:
+                return False
+            previous_expected = secret.mac("log", previous + "\n" + _canonical(line)).hex()[:32]
+            if not hmac.compare_digest(mac, previous_expected):
+                return False
+            previous = mac
+        last = json.loads(lines[-1])
+        return last.get("event") == "seal" and last.get("lines") == len(lines) - 1
+    except (ValueError, KeyError, IndexError, TypeError, AttributeError):
+        return False
 
 
 def _checked_token(value: str) -> str:

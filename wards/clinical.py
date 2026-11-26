@@ -55,6 +55,7 @@ class ConditionPlan:
         self.threshold = threshold
         self.names: dict[str, set[str]] = defaultdict(set)      # code -> spellings
         self.rare: frozenset[str] = frozenset()
+        self.holders: dict[str, set[str]] = {}       # code -> pseudonyms (for counts only)
         self._codes: re.Pattern[str] | None = None
         self._words: re.Pattern[str] | None = None
 
@@ -108,6 +109,7 @@ class ConditionPlan:
                     holders[m.group(0)].add(patient)
                 for m in everything[1].finditer(text) if everything[1] else ():
                     holders[by_name[" ".join(m.group(0).split()).casefold()]].add(patient)
+        self.holders = dict(holders)
         self.rare = frozenset(code for code, patients in holders.items()
                               if len(patients) <= self.threshold)
         if self.rare:

@@ -65,6 +65,7 @@ output/
   sanitized/       same folders, formats and (unless they held personal data) file names
   report.json      every input file by SHA-256, status, counts, timing, peak memory
   records.jsonl    which record belongs to which pseudonym (null when unsure)
+  logs/run.jsonl   what the run did, as counts only (see "Run log" below)
 ```
 
 ## Architecture
@@ -128,7 +129,8 @@ run.
 
 - The secret is read once, held in an object that cannot be printed or serialised, and a
   run without it is refused.
-- Logs carry only counts, reason codes, exception class names and file-hash prefixes.
+- Logs carry only counts, values from fixed lists, exception class names and digests
+  (see "Run log").
 - No temporary files outside the output folder; only redacted bytes are ever written.
   Input is opened read-only. Core dumps are disabled.
 - Raw values and the pseudonym map exist only in process memory, so there is no
@@ -138,6 +140,45 @@ run.
   `SIGTERM`, or an out-of-memory error) removes everything staged, writes a report marked
   `"status": "failed"` and exits non-zero. A forced kill cannot be handled; because
   `report.json` is published last, the output then never looks complete.
+
+### Run log
+
+`logs/run.jsonl` (JSON Lines) records each stage's time and memory, linking decisions
+(merges by kind of evidence, merges refused by the constraint that stopped them), privacy
+exposure counts, the self-scan's repairs and every failure. `--log-level detail` adds, per
+file, its status and reason and how many values of each type and from each detector were
+removed. Short summary lines also go to standard output.
+
+- **Closed schema** ([wards/logschema.py](wards/logschema.py)): every event, field and value
+  is declared. A field is a number, a value from a fixed list, a short digest or an
+  exception class name, so nothing read from the input can be written. Files are named by
+  their position in `report.json`, never by path. Out-of-schema events are dropped and
+  counted (tests refuse them).
+- **Never logged**: values, file names, record locations, diagnosis codes (a rare code is
+  itself identifying) and exception messages.
+- **Tamper evidence**: each line carries an HMAC over the previous one, keyed with
+  `RAKSHA_SECRET`; the last line seals the line count and the SHA-256 of `report.json`.
+  `RAKSHA_SECRET=... python3 tools/verify_log.py <output>` checks it.
+- **Same gate as the data**: the finished log is self-scanned like every released file; if
+  anything identifying is found, the log is withheld and the release still goes out.
+- A failed run still writes its log, ending with `"status": "failed"`.
+
+### When a check finds personal data
+
+| Where | What happens |
+|---|---|
+| Self-scan of finished values, during a run | Redacted in place and the file checked again; a file that still fails, or whose structure changed, is quarantined and listed with its reason; a failure of the whole run publishes nothing. Counts go to the log (`self_scan`). |
+| Record locations naming someone | The record is left out of `records.jsonl` (`records_withheld`). |
+| The log itself | The log is withheld. |
+| Our attack replay or `check_dev.py`, during development | Treated as a bug: reproduced with invented data as a failing test, fixed for the whole family of cases, never for one example. |
+| A release already handed over | Withdraw it; change `RAKSHA_SECRET` so old pseudonyms and date shifts cannot be linked to the new release; fix; release again; keep an incident note with counts and reason codes only. |
+
+The log's `privacy` line also reports, without values, how many patients are alone in their
+(age band, sex, district) group and how many hold a diagnosis shared by three or fewer
+patients. On the practice data these are 29 and 13 of 48. Those risks are handled by
+dataset-wide rules (the age-band width, rare-diagnosis suppression), never by changing
+individual patients; wider settings were measured and cost more utility than they saved
+(SCORES.md).
 
 ## Measured results
 

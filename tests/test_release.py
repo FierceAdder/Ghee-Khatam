@@ -169,7 +169,8 @@ def test_clean_documents_survive_the_gate_unchanged(release):
 def test_nothing_staged_is_left_behind(release):
     result = release(FILES)
     assert sorted(p.name for p in result.root.iterdir()) == \
-        ["records.jsonl", "report.json", "sanitized"]
+        ["logs", "records.jsonl", "report.json", "sanitized"]
+    assert [p.name for p in (result.root / "logs").iterdir()] == ["run.jsonl"]
     assert result.report["status"] == "complete"
 
 
@@ -216,7 +217,7 @@ def test_a_dataset_wide_failure_releases_nothing(tmp_path, policy, lexicon, monk
     assert all(value not in log for value in SECRETS)
 
 
-@pytest.mark.parametrize("failing_call", [1, 2, 3])
+@pytest.mark.parametrize("failing_call", [1, 2, 3, 4])
 def test_a_failure_while_publishing_releases_nothing(tmp_path, policy, lexicon,
                                                      monkeypatch, failing_call):
     from wards import release as release_module

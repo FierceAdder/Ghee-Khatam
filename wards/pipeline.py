@@ -10,6 +10,9 @@ release must never look complete.
 
 from __future__ import annotations
 
+import dataclasses
+import hashlib
+import json
 import re
 import sys
 import time
@@ -17,7 +20,7 @@ from collections import Counter, defaultdict
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from wards import dates, documents, ingest, validate, write
+from wards import dates, documents, ingest, logschema, validate, write
 from wards.audit import Auditor
 from wards.clinical import ConditionPlan
 from wards.detect import Detector, resolve
@@ -33,7 +36,7 @@ from wards.policy import Policy
 from wards.privacy import Privacy
 from wards.redact import PatientContext, Redactor
 from wards.release import Release
-from wards.security import SafeLog, Secret
+from wards.security import SafeLog, Secret, Terminated
 from wards.sweep import NameBag, NameSweeper
 
 DEFAULT_REFERENCE_YEAR = 2025
@@ -80,6 +83,9 @@ class Pipeline:
         self.privacy = Privacy(policy, secret)
         self.linker = Linker(self.lexicon, secret, policy.phone_hub_groups)
         self.secret = secret
+        self._demographics: list[tuple[str, str, int]] = []
+        self._repairs: dict[int, int] = {}
+        self._stage_started = 0.0
 
     # ------------------------------------------------------------------- driver
 
@@ -87,15 +93,16 @@ class Pipeline:
         started = time.monotonic()
         input_dir, output_dir = _check_paths(input_dir, output_dir)
         release = Release(output_dir)
+        self._stage_started = started
         states: list[FileState] = []
         reserve = bytearray(_RESERVE_BYTES)
         try:
             release.open()
             return self._run(input_dir, release, states, started)
-        except BaseException:
+        except BaseException as error:
             del reserve
             release.abort()
-            self._report_failure(output_dir, states, time.monotonic() - started)
+            self._report_failure(output_dir, states, time.monotonic() - started, error)
             raise
 
     def _run(self, input_dir: Path, release: Release, states: list[FileState],
@@ -104,61 +111,131 @@ class Pipeline:
             states.append(FileState(ingest.read_file(path, input_dir, self.policy)))
         for state in states:
             state.reason = state.item.reason
-        self.log.event("ingested", files=len(states))
+        self.log.record("run_started", files=len(states), policy=_digest(self.policy))
+        self._stage_done("ingest", states)
 
         self._each(states, "parse", self._parse, needs_doc=False)
+        self._stage_done("parse", states)
         self._each(states, "detect", lambda s: self.detector.detect_document(s.doc))
-        self.log.event("detected", files=sum(s.alive for s in states))
+        self._stage_done("detect", states)
 
         knowledge = Knowledge(self.lexicon)
         knowledge.learn([s.doc for s in states if s.alive])
         auditor = Auditor(self.lexicon)
         self._each(states, "sweep", lambda s: self._apply_knowledge(s, knowledge, auditor))
+        self._stage_done("sweep", states)
 
         reference_year = self._reference_year(states)
         self._date_orders(states)
         contexts, sweeper = self._link(states, knowledge, reference_year)
-        self.log.event("linked", records=len(contexts),
-                       patients=len({c.pseudonym for c in contexts.values() if c.pseudonym}))
-        self.log.event("privacy", age_band_years=self.privacy.band_width)
+        self.log.record("linking", **{k: self.linker.stats[k] for k in
+                                      logschema.EVENTS["linking"][1]})
+        self._stage_done("link", states)
 
         conditions = self._plan_conditions(states, contexts)
+        self._log_privacy(conditions)
+        self._stage_done("conditions", states)
         redactor = Redactor(self.lexicon, self.privacy, knowledge)
         self._each(states, "redact", lambda s: self._redact(
             s, redactor, sweeper, conditions, contexts, reference_year, auditor))
-        repairs: Counter = Counter()
-        self._each(states, "audit", lambda s: repairs.update(found=auditor.repair(s.doc)))
+        self._stage_done("redact", states)
+        self._each(states, "audit",
+                   lambda s: self._repairs.__setitem__(id(s), auditor.repair(s.doc)))
+        self._stage_done("audit", states)
         self._name_outputs(states, knowledge, sweeper, auditor)
+        self._stage_done("names", states)
         self._each(states, "stage", lambda s: self._stage(s, release, auditor))
-        self.log.event("verified", files=sum(s.alive for s in states),
-                       repairs=repairs["found"])
+        self._stage_done("stage", states)
 
         result = self._report(states, redactor, auditor, time.monotonic() - started)
+        self.log.record("self_scan", repairs=sum(self._repairs.values()),
+                        files_repaired=sum(n > 0 for n in self._repairs.values()),
+                        files_quarantined=sum(s.reason == "self_scan_failed" for s in states),
+                        records_withheld=result.counts["records_quarantined"])
+        self._log_files(states)
         report = write.build_report(result.files, result.counts, result.entities,
                                     result.seconds, peak_rss_mb())
-        release.publish(result.records, report, [s.output for s in states if s.alive])
-        self.log.event("done", **{k: result.counts[k] for k in
-                                  ("files_total", "files_sanitized", "files_quarantined",
-                                   "records_processed", "records_linked")},
-                       seconds=round(result.seconds, 2))
+        self._finish("complete", result.counts, result.seconds)
+        log = self.log.sealed(self.secret, _sha256(write.report_text(report)))
+        if not auditor.is_clean(log):
+            log = None                  # never publish a log that names anyone
+            self.log.event("log_withheld", lines=1)
+        release.publish(result.records, report, [s.output for s in states if s.alive], log)
         return result
 
+    # ---------------------------------------------------------------------- log
+
+    def _stage_done(self, stage: str, states: list[FileState]) -> None:
+        now = time.monotonic()
+        self.log.record("stage", stage=stage, seconds=round(now - (self._stage_started or now), 3),
+                        peak_rss_mb=peak_rss_mb(), files=sum(s.alive for s in states))
+        self._stage_started = now
+
+    def _finish(self, status: str, counts: dict, seconds: float) -> None:
+        self.log.record("run_finished", status=status, seconds=round(seconds, 2),
+                        peak_rss_mb=peak_rss_mb(),
+                        **{k: counts[k] for k in logschema.EVENTS["run_finished"][1]
+                           if k in counts})
+
+    def _log_privacy(self, conditions: ConditionPlan) -> None:
+        """How exposed patients still are, as counts (never the values)."""
+        groups = Counter((district, sex, self.privacy.age_band(age))
+                         for district, sex, age in self._demographics)
+        shared_by_few = {p for code, patients in conditions.holders.items()
+                         if code not in conditions.rare and len(patients) <= 3
+                         for p in patients}
+        self.log.record("privacy", age_band_years=self.privacy.band_width,
+                        suppressed_codes=len(conditions.rare),
+                        patients=len(self._demographics),
+                        unique_band_sex_district=sum(n == 1 for n in groups.values()),
+                        patients_with_code_held_by_3_or_fewer=len(shared_by_few))
+
+    def _log_files(self, states: list[FileState]) -> None:
+        """Per-file counts, by position in report.json (detail level only)."""
+        if self.log.level != logschema.DETAIL:
+            return
+        for index, state in enumerate(states):
+            reason = state.reason if state.reason in logschema.REASONS else "other"
+            if not state.alive:
+                self.log.record("file", file=index, status="quarantined", reason=reason)
+                continue
+            entities: Counter = Counter()
+            sources: Counter = Counter()
+            for segment in state.doc.segments:
+                for mention in segment.mentions:
+                    entities[mention.etype.value] += 1
+                    sources[mention.source if mention.source in logschema.SOURCES
+                            else "other"] += 1
+            self.log.record("file", file=index, status="sanitized",
+                            records=len(state.doc.records),
+                            repairs=self._repairs.get(id(state), 0),
+                            renamed=int(state.output != state.item.rel))
+            self.log.record("file_entities", file=index, **entities)
+            self.log.record("file_sources", file=index, **sources)
+
     def _report_failure(self, output_dir: Path, states: list[FileState],
-                        seconds: float) -> None:
+                        seconds: float, error: BaseException) -> None:
         """Say plainly that nothing was released. Never hides the original error."""
         try:
             files = [{"input_sha256": s.item.sha256, "output": None, "status": "quarantined",
                       "reason": s.reason or "run_failed"} for s in states]
             counts = dict.fromkeys(_COUNT_NAMES, 0)
             counts.update(files_total=len(files), files_quarantined=len(files))
+            self.log.record("problem", stage="run", reason=_failure_reason(error),
+                            error=type(error).__name__)
+            self._finish("failed", counts, seconds)
+            report = write.build_report(files, counts, {}, seconds, peak_rss_mb(),
+                                        status="failed")
             (output_dir / "sanitized").mkdir(parents=True, exist_ok=True)
-            write.write_report(output_dir / "report.json", write.build_report(
-                files, counts, {}, seconds, peak_rss_mb(), status="failed"))
-        except Exception as error:  # noqa: BLE001 - report the class only
-            self.log.problem("failure_report_not_written", error=error)
+            # the log first, so that the report stays the last thing written
+            write.write_text_file(output_dir / "logs" / "run.jsonl", self.log.sealed(
+                self.secret, _sha256(write.report_text(report))))
+            write.write_report(output_dir / "report.json", report)
+        except Exception as failure:  # noqa: BLE001 - report the class only
+            self.log.problem("failure_report_not_written", error=failure)
 
     def _each(self, states: list[FileState], stage: str, action, needs_doc: bool = True) -> None:
-        for state in states:
+        for index, state in enumerate(states):
             if state.reason or (needs_doc and state.doc is None):
                 continue
             try:
@@ -166,7 +243,8 @@ class Pipeline:
             except QuarantineError as error:
                 state.quarantine(error.reason)
             except Exception as error:  # noqa: BLE001 - one bad file must not stop the run
-                self.log.problem(f"{stage}_failed", state.item.sha256, error)
+                self.log.record("problem", stage=stage, reason="processing_error",
+                                error=type(error).__name__, file=index)
                 state.quarantine("processing_error")
 
     # ------------------------------------------------------------------- stages
@@ -286,7 +364,8 @@ class Pipeline:
         for record_key, context in contexts.items():
             context.top_coded = oldest[context.pseudonym or record_key] \
                 >= self.policy.age_top_code
-        self.privacy.choose_band_width(_demographics(evidence, assigned, contexts))
+        self._demographics = _demographics(evidence, assigned, contexts)
+        self.privacy.choose_band_width(self._demographics)
         return contexts, sweeper
 
     def _plan_conditions(self, states: list[FileState],
@@ -299,7 +378,6 @@ class Pipeline:
                 linked += [(contexts[r.key].pseudonym, r) for r in state.doc.records
                            if contexts[r.key].pseudonym]
         plan.decide(linked)
-        self.log.event("conditions", suppressed_codes=len(plan.rare))
         return plan
 
     def _redact(self, state: FileState, redactor: Redactor, sweeper: NameSweeper,
@@ -456,6 +534,25 @@ def _demographics(evidence, assigned: dict[int, str],
         age[patient] |= {context.reference_year - high for _, high in item.summary.births}
     return [(min(district[p]), min(sex[p]), sorted(age[p])[len(age[p]) // 2])
             for p in sorted(age) if district[p] and sex[p] and age[p]]
+
+
+def _digest(policy: Policy) -> str:
+    text = json.dumps(dataclasses.asdict(policy), sort_keys=True, default=str)
+    return _sha256(text)[:16]
+
+
+def _sha256(text: str) -> str:
+    return hashlib.sha256(text.encode("utf-8")).hexdigest()
+
+
+def _failure_reason(error: BaseException) -> str:
+    if isinstance(error, Terminated):
+        return "terminated"
+    if isinstance(error, KeyboardInterrupt):
+        return "interrupted"
+    if isinstance(error, MemoryError):
+        return "out_of_memory"
+    return "run_failed"
 
 
 def _natural(loc: str) -> list:

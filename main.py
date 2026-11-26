@@ -38,10 +38,13 @@ def main(argv: list[str] | None = None) -> int:
         parser.add_argument("--input", default=os.environ.get("RAKSHA_INPUT"))
         parser.add_argument("--output", default=os.environ.get("RAKSHA_OUTPUT"))
         parser.add_argument("--policy", default=str(HERE / "config" / "policy.yaml"))
+        parser.add_argument("--log-level", default="summary", choices=("summary", "detail"),
+                            help="detail adds per-file counts to logs/run.jsonl")
         args = parser.parse_args(argv)
         if not args.input or not args.output:
             raise ConfigError("input_and_output_required")
         secret = Secret.from_env()
+        log = SafeLog(level=args.log_level)
         pipeline = Pipeline(load_policy(Path(args.policy)), secret, log)
         pipeline.run(Path(args.input), Path(args.output))
         return 0
