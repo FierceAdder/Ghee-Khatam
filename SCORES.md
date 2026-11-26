@@ -144,6 +144,55 @@ On the test side, what still leaks is mostly patient names (about 4 %), villages
 PIN codes and landmarks (about 20-30 %), and linking recall stays low (0.73-0.88), with one
 false merge on seed 2. These are the targets of the Phase 14 detection rebuild.
 
+## Phase 14: detection rebuild and name-model comparison
+
+**Form layouts.** Lines shaped `label : value` under unknown labels are typed by their values
+across the dataset. Scrambled copies: 11 to 9 and 10 to 7 leaked pieces. It first broke
+linking on the test side (recall 0.74 to 0.52) by letting an untyped layout detection erase a
+relative's role; a known role now survives such merges (recall back to 0.74). That
+regression was noticed on the test side, so test seeds 1-3 count as tuned from here on.
+
+**Learned name check, four candidates.** Each adds detections only (never used for linking
+or searched for elsewhere). Trained on generated training data only; validated on the
+scrambled practice copies (new names and wording); measured once on unused test seeds 4-6.
+
+| Candidate | Validation: leaked / names / canaries (scrambled hard copy) | Medical kept (practice) | Practice run time |
+|---|---:|---:|---:|
+| off | 9 / 7 / 2 | 99.2 % | 2 s |
+| standard-library classifier | 4 / 2 / 1 | 99.2 % | 2 s |
+| CRF (python-crfsuite) | 4 / 2 / 2 | 99.2 % | 2 s |
+| **IndicBERT** (33.4M parameters, MIT, fine-tuned, 8-bit ONNX, 62 MB) | **2 / 0 / 0** | 99.0 % | 14 s |
+
+The standard-library classifier also changed a clean protocol document ("Differential
+diagnosis"); the CRF did not. IndicBERT first tagged clinical abbreviations (HTN, DM2, TB,
+ATT) as names, costing 1.5 points of medical values; words with digits and short all-capital
+words are now never sent to it.
+
+**Independent measurement, test seeds 4-6** (generated after every choice was made):
+
+| | Leaked | Names leaked | Canaries | Medical kept | Link P / R |
+|---|---:|---:|---:|---:|---:|
+| off | 29 / 31 / 32 (2.4-2.9 %) | 13 / 7 / 14 | 0 / 1 / 0 | 99.1 / 99.6 / 98.5 % | 1.00 / 0.67, 1.00 / 0.79, 0.95 / 0.71 |
+| **IndicBERT** | **15 / 24 / 18 (1.2-1.9 %)** | **1 / 0 / 0** | **0 / 0 / 0** | same | same |
+
+Cost of IndicBERT: 2,000 files (copies of the practice data, so repeated lines are cached)
+take 29 s and 572 MB, against 20 s and 239 MB without it; on unique text it adds about 12 s
+per 200 files on this Mac. It runs within an 8-minute budget and is skipped (and counted in
+the log) for files beyond it. It needs onnxruntime, sentencepiece and numpy at run time.
+
+**Other techniques tried** (attack replay and utility estimate, score out of 45):
+
+| Technique | Stage | Result | Decision |
+|---|---|---|---|
+| ICD-10 category or chapter instead of `R69` for one-patient codes | privacy | 38.97 against 39.37 (worst case 38.42 against 38.82) | rejected: the attacker treats a category or range as still matching |
+| l-diversity (2 or 3 diagnoses per district, sex and age-band group) | privacy | no change: bands are already at their widest on practice data | kept as an option, off |
+| Mondrian age ranges per group of patients | privacy | 3 secrets: 39.65 against 39.37; 10 secrets: see below | see below |
+| Fuzzy spellings (Jaro-Winkler 0.95 on consonant skeletons) | linking | recall 0.95 to 0.96 and 0.99 to 1.00 on four validation sets, no false merges | kept, on |
+
+Scores vary noticeably with the secret: since Phase 9 changed the keys that seed each
+patient's date shift, one secret moved the targeted attack from 0.45 to 0.53 for the same
+code. Privacy decisions from here use 10 secrets.
+
 ## Attack replay and utility estimate
 
 Averaged over three secrets. "Score" is 25 x privacy + 20 x utility (out of 45). Attack

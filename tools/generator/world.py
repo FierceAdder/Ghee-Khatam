@@ -8,8 +8,10 @@ import string
 from dataclasses import dataclass, field
 
 from generator import vocab
+from wards.lexicon import Lexicon
 
 REF_DATE = dt.date(2026, 11, 20)
+_LEXICON = Lexicon.load()
 
 
 @dataclass(frozen=True)
@@ -148,6 +150,14 @@ class World:
         return self.rng.choice(options)
 
     def _village(self) -> Word:
+        """A village name that is not also a district (Sita + pur = Sitapur)."""
+        for _ in range(50):
+            village = self._village_once()
+            if not _LEXICON.district(village.latin.split()[0]):
+                return village
+        return village
+
+    def _village_once(self) -> Word:
         rng = self.rng
         root = Word(*rng.choice(vocab.pairs(vocab.VILLAGE_ROOTS[self.split])))
         if rng.random() < 0.25:

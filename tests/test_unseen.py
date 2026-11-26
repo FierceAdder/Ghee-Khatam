@@ -355,3 +355,13 @@ def test_an_unknown_label_is_typed_by_its_values_across_files(release):
     text = " ".join(out.text(name) for name in notes)
     for value in ("Lalthanzuala", "Tomba Hmar", "Kyrshan", "Sohangarh", "Bhimkhera"):
         assert value not in text
+
+
+def test_a_known_role_survives_a_stronger_unknown_one():
+    from wards.model import Mention, Role
+
+    text = "Accompanied by Tomba Hmar"
+    relative = Mention(E.RELATIVE_NAME, 15, 25, "Tomba Hmar", role=Role.RELATIVE, priority=66)
+    unknown = Mention(E.PATIENT_NAME, 15, 25, "Tomba Hmar", role=Role.UNKNOWN, priority=79)
+    [merged] = resolve([relative, unknown], text)
+    assert merged.role is Role.RELATIVE and merged.etype is E.RELATIVE_NAME

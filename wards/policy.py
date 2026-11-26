@@ -13,6 +13,10 @@ from pathlib import Path
 from wards.errors import ConfigError
 
 DOB_MODES = ("shift", "year", "remove")
+NAME_MODELS = ("off", "perceptron", "crf", "indicbert")
+DIAGNOSIS_MODES = ("suppress", "category", "chapter")
+AGE_PARTITIONING = ("global", "mondrian")
+NAME_MATCHING = ("exact", "fuzzy")
 
 
 @dataclass(frozen=True)
@@ -30,6 +34,11 @@ class Policy:
     phone_hub_groups: int = 3
     max_file_mb: int = 200
     max_json_depth: int = 200
+    name_model: str = "off"
+    l_diversity: int = 0
+    rare_diagnosis_mode: str = "suppress"
+    age_partitioning: str = "global"
+    name_matching: str = "exact"
 
     def validate(self) -> "Policy":
         checks = {
@@ -47,6 +56,11 @@ class Policy:
             "min_group_size": 1 <= self.min_group_size <= 100,
             "max_file_mb": 1 <= self.max_file_mb <= 2000,
             "max_json_depth": 16 <= self.max_json_depth <= 500,
+            "name_model": self.name_model in NAME_MODELS,
+            "l_diversity": 0 <= self.l_diversity <= 10,
+            "rare_diagnosis_mode": self.rare_diagnosis_mode in DIAGNOSIS_MODES,
+            "age_partitioning": self.age_partitioning in AGE_PARTITIONING,
+            "name_matching": self.name_matching in NAME_MATCHING,
         }
         for name, ok in checks.items():
             if not ok:

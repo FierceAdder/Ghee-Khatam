@@ -28,6 +28,7 @@ from wards.errors import ConfigError, QuarantineError
 from wards.knowledge import Knowledge, id_shape
 from wards.layout import LayoutTypes
 from wards.lexicon import Lexicon
+from wards.namemodel import NameModel, Stats
 from wards.link import Linker, record_names
 from wards.model import Channel, DocKind, Document, Segment
 from wards.model import QUASI_TYPES
@@ -42,6 +43,8 @@ from wards.sweep import NameBag, NameSweeper
 
 DEFAULT_REFERENCE_YEAR = 2025
 _RESERVE_BYTES = 16 << 20        # freed on failure so that clean-up still has memory
+# The run limit is 15 minutes; the learned name check may use the first 8 of them.
+MODEL_BUDGET_SECONDS = 8 * 60
 _COUNT_NAMES = ("files_total", "files_sanitized", "files_quarantined", "records_processed",
                 "identifiers_detected", "records_linked", "records_generalized",
                 "records_suppressed", "records_quarantined")
@@ -82,9 +85,12 @@ class Pipeline:
         self.lexicon = lexicon or Lexicon.load()
         self.detector = Detector(self.lexicon)
         self.privacy = Privacy(policy, secret)
-        self.linker = Linker(self.lexicon, secret, policy.phone_hub_groups)
+        self.linker = Linker(self.lexicon, secret, policy.phone_hub_groups,
+                             fuzzy=policy.name_matching == "fuzzy")
         self.secret = secret
-        self._demographics: list[tuple[str, str, int]] = []
+        self._demographics: list[tuple[str, str, str, int]] = []
+        self.name_model = _load_name_model(policy.name_model, self.lexicon)
+        self.model_skipped = 0
         self._repairs: dict[int, int] = {}
         self._stage_started = 0.0
 
@@ -128,6 +134,10 @@ class Pipeline:
         auditor = Auditor(self.lexicon)
         self._each(states, "sweep", lambda s: self._apply_knowledge(s, knowledge, auditor))
         self._stage_done("sweep", states)
+        if self.name_model is not None:
+            stats = Stats.build(s.doc for s in states if s.alive)
+            self._apply_model(states, stats, started + MODEL_BUDGET_SECONDS)
+            self._stage_done("model", states)
 
         reference_year = self._reference_year(states)
         self._date_orders(states)
@@ -137,6 +147,7 @@ class Pipeline:
         self._stage_done("link", states)
 
         conditions = self._plan_conditions(states, contexts)
+        self._generalise_ages(conditions)
         self._log_privacy(conditions)
         self._stage_done("conditions", states)
         redactor = Redactor(self.lexicon, self.privacy, knowledge)
@@ -152,6 +163,8 @@ class Pipeline:
         self._stage_done("stage", states)
 
         result = self._report(states, redactor, auditor, time.monotonic() - started)
+        if self.name_model is not None:
+            self.log.record("name_model", files_skipped=self.model_skipped)
         self.log.record("self_scan", repairs=sum(self._repairs.values()),
                         files_repaired=sum(n > 0 for n in self._repairs.values()),
                         files_quarantined=sum(s.reason == "self_scan_failed" for s in states),
@@ -181,10 +194,22 @@ class Pipeline:
                         **{k: counts[k] for k in logschema.EVENTS["run_finished"][1]
                            if k in counts})
 
+    def _generalise_ages(self, conditions: ConditionPlan) -> None:
+        """Choose the release-wide band width (with l-diversity over diagnoses when asked)
+        and, for Mondrian partitioning, each patient's age range."""
+        held: dict[str, set[str]] = defaultdict(set)
+        for code, patients in conditions.holders.items():
+            for patient in patients:
+                held[patient].add(code)
+        self.privacy.choose_band_width([(district, sex, age, frozenset(held[patient]))
+                                        for patient, district, sex, age in self._demographics])
+        if self.policy.age_partitioning == "mondrian":
+            self.privacy.partition(self._demographics)
+
     def _log_privacy(self, conditions: ConditionPlan) -> None:
         """How exposed patients still are, as counts (never the values)."""
-        groups = Counter((district, sex, self.privacy.age_band(age))
-                         for district, sex, age in self._demographics)
+        groups = Counter((district, sex, self.privacy.age_band(age, patient))
+                         for patient, district, sex, age in self._demographics)
         shared_by_few = {p for code, patients in conditions.holders.items()
                          if code not in conditions.rare and len(patients) <= 3
                          for p in patients}
@@ -265,6 +290,31 @@ class Pipeline:
         for segment in state.doc.file_segments():
             self._merge(segment, knowledge.sweep(segment, False))
         auditor.learn(state.doc)
+
+    MODEL_CHUNK = 40                 # files per model call: batches stay full
+
+    def _apply_model(self, states: list[FileState], stats: Stats, deadline: float) -> None:
+        """Run the learned check over the dataset in chunks of files, so lines from many
+        files share batches. It only adds detections: past its time budget, or if it
+        fails, the remaining files are counted as skipped and keep the rules' result."""
+        alive = [s for s in states if s.alive]
+        for start in range(0, len(alive), self.MODEL_CHUNK):
+            chunk = alive[start:start + self.MODEL_CHUNK]
+            if time.monotonic() > deadline:
+                self.model_skipped += len(chunk)
+                continue
+            segments = [s for state in chunk for s in state.doc.segments
+                        if s.field is F.TEXT and not s.numeric
+                        and s.channel in (Channel.CONTENT, Channel.ENCODED)]
+            try:
+                found = self.name_model.document(segments, stats)
+            except Exception as error:  # noqa: BLE001 - an optional check must not cost files
+                self.model_skipped += len(chunk)
+                self.log.record("problem", stage="model", reason="other",
+                                error=type(error).__name__)
+                continue
+            for segment in segments:
+                self._merge(segment, found.get(id(segment), []))
 
     def _merge(self, segment: Segment, extra: list) -> None:
         if not extra or segment.field is F.ATTACHMENT:
@@ -369,7 +419,6 @@ class Pipeline:
             context.top_coded = oldest[context.pseudonym or record_key] \
                 >= self.policy.age_top_code
         self._demographics = _demographics(evidence, assigned, contexts)
-        self.privacy.choose_band_width(self._demographics)
         return contexts, sweeper
 
     def _plan_conditions(self, states: list[FileState],
@@ -522,8 +571,8 @@ class Pipeline:
 
 
 def _demographics(evidence, assigned: dict[int, str],
-                  contexts: dict[str, PatientContext]) -> list[tuple[str, str, int]]:
-    """``(district, sex, age)`` of every linked patient for whom all three are known."""
+                  contexts: dict[str, PatientContext]) -> list[tuple[str, str, str, int]]:
+    """``(patient, district, sex, age)`` of every linked patient with all three known."""
     district: dict[str, set] = defaultdict(set)
     sex: dict[str, set] = defaultdict(set)
     age: dict[str, set] = defaultdict(set)
@@ -536,8 +585,18 @@ def _demographics(evidence, assigned: dict[int, str],
             district[patient].add(context.district.latin)
         sex[patient] |= item.summary.sexes
         age[patient] |= {context.reference_year - high for _, high in item.summary.births}
-    return [(min(district[p]), min(sex[p]), sorted(age[p])[len(age[p]) // 2])
+    return [(p, min(district[p]), min(sex[p]), sorted(age[p])[len(age[p]) // 2])
             for p in sorted(age) if district[p] and sex[p] and age[p]]
+
+
+def _load_name_model(backend: str, lexicon: Lexicon):
+    """The learned name check chosen in the policy; refuse to start if it cannot load."""
+    if backend == "off":
+        return None
+    try:
+        return NameModel(backend, lexicon)
+    except (ImportError, OSError, ValueError, KeyError):
+        raise ConfigError("name_model_unavailable") from None
 
 
 def _digest(policy: Policy) -> str:

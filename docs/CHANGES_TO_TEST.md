@@ -36,7 +36,7 @@ score would notice.
 |---|---|---|---|---|
 | T-10 | Our own replay of attacks A1-A7 | Compare with the published readings (passthrough: A4 99.3 %, A5 97.1 %) | Raw-input results are close to those readings | kept: raw input A4 0.979 (organisers 0.979), A5 1.000 (0.9999), A2/A3 0.67 (0.92, still low) |
 | T-11 | Utility estimate that follows the published formula | Cross-check with `check_dev.py` | Moves in the same direction as the toolkit's numbers | kept: practice release 0.956. An estimate; probe weights are unpublished |
-| T-12 | Roll rare diagnosis codes up the ICD-10 ladder, for every holder of the code | Attack replay plus utility estimate, for k = 2, 3, 4, 5 | Total score (25 x privacy + 20 x utility) rises | kept at one patient: +0.22. Two, three and five patients lose 0.1, 0.4 and 0.9. Chapter ranges gained nothing |
+| T-12 | Roll rare diagnosis codes up the ICD-10 ladder, for every holder of the code | Attack replay plus utility estimate, for k = 2, 3, 4, 5 | Total score (25 x privacy + 20 x utility) rises | kept at one patient as `R69`. Re-tested in Phase 14 as `rare_diagnosis_mode`: category and chapter score 38.97 against 39.37 for `R69` (worst case 38.42 against 38.82): the attacker treats a category or range as still matching |
 | T-13 | Generalise rare procedures the same way | Same | Total rises | rejected: no change in the targeted attack, small utility loss |
 | T-14 | Move one date by a day or two for visits that stay unique on (condition, stay length) | Same, with jitter 0, 1, 2 days | Total rises after counting lost interval accuracy | rejected: removing the stay signal entirely gains at most 0.18, less than the interval accuracy it would cost |
 | T-15 | Give a still-exposed visit its own pseudonym | Same, plus linking recall | Total rises including the identity score | open |
@@ -48,6 +48,8 @@ score would notice.
 | T-21 | Choose a transformation per patient (the document's method) | Not to be built | Rejected: order-dependent, and the pattern of changes identifies records | rejected |
 | T-22 | Choose the age-band width from the data (groups by district and sex, assumed registry density) | Practice picks 15; unit cases with large populations pick 5 | Matches the measured best on practice and keeps narrow bands on large data | kept on practice; the large-data behaviour is untested against a real registry |
 | T-23 | Remove impossible ages (negative values in the data) instead of releasing them | Count them; check the utility estimate | The unique value is gone | kept: one such row in the practice data; costs one generalisation field |
+| T-24 | l-diversity over diagnoses in each (district, sex, age band) group | Attack replay, 3 secrets | Score rises | no change on practice data (bands already at their widest); kept as an option, off |
+| T-25 | Mondrian age ranges per group of patients instead of one band width | Attack replay, 3 then 10 secrets | Score rises under every attacker variant | pending the 10-secret run |
 
 ## Unseen formats and detection (proposed change 4)
 
@@ -59,7 +61,7 @@ score would notice.
 | T-33 | Preserve a span only on grammar evidence, not word-list membership alone | Meaning-trap cases | Precision holds with higher recall | open |
 | T-34 | Round every edit outward to whole characters and combining marks | Devanagari cases | No broken matras | kept on unit cases. Its separate effect on leak counts was not measured |
 | T-35 | More label-free person cues (relation grammar, "naam", chat senders) | Run with all name lists removed on altered copies | Leaks fall | kept: added spouse, child of, ward of, care giver and name-before-age cues. With all name lists removed, no piece leaks on practice data or the first hard copy |
-| T-36 | Small averaged-perceptron name scorer, additive only | Recall and precision on altered copies, with it on and off | Clear recall gain with no utility loss | deferred |
+| T-36 | Learned name check, additive only: standard-library perceptron, CRF and IndicBERT compared | Validation on scrambled practice copies; once on unused test seeds 4-6 | Clear recall gain with no utility loss | IndicBERT best: test-side names leaked 13/7/14 to 1/0/0, canaries 1 to 0, medical unchanged; about 12 s per 200 files. Shipping it awaits a decision (size and dependencies) |
 | T-37 | Remove name-list words that coincide with practice canary words | Leak counts with and without | Results unchanged | open |
 | T-38 | Detect names written in lower case in prose | Altered chat notes | Gain without false positives | open |
 | T-39 | Birth dates with no label anywhere in a patient's records | Altered notes | Detected without breaking visit dates | open |
@@ -73,6 +75,9 @@ score would notice.
 | T-3H | Remove staff names (nurses, technicians, pharmacists, ASHA and ANM workers) as `[STAFF]`; keep doctors and role words; never link by them | Unit cases; practice and altered copies | Staff names gone, links and medical values unchanged | kept: practice and all copies unchanged (they name no staff); structured staff fields previously leaked |
 | T-3I | Labelled government and programme IDs (ration card, voter ID, RCH, MLC, vehicle…) are other IDs, never Aadhaar | Generated training side; unit cases | Rows stop looking like two people | kept: training linking recall 0.83-0.88 to 0.96-1.00. Test-side other-ID numbers are not independent (see SCORES.md) |
 | T-3J | Compositional generator with held-out ingredients (`tools/generator`) | Exact answer keys; coverage, novelty and realism reports | Used as the standing train/test benchmark | kept: test side leaks 3.4-5.2 % after Phase 13 |
+| T-3K | Read form layouts ("label : value", wide gaps) and type unknown labels by their values across the dataset | Scrambled copies; practice; generated training side | Leaks fall, nothing else worse | kept: scrambled copies 11 to 9 and 10 to 7 leaked pieces; practice unchanged |
+| T-3L | When overlapping name detections merge, a known role (patient, relative, staff) is never replaced by "unknown" | Linking counters in the run log | Name-plus-relative merges return | kept: restored test-side linking recall 0.52 to 0.74, which T-3K had broken (seen on the test side; see SCORES.md) |
+| T-3M | Fuzzy spellings: join name skeletons with Jaro-Winkler at least 0.95 before linking | Linking on seven validation sets; homonym pairs | Recall rises, no false merges | kept: recall 0.95 to 0.96 and 0.99 to 1.00 on four sets, no false merges |
 
 ## Linking (proposed changes 2 and 3)
 

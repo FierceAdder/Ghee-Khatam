@@ -5,3 +5,7 @@ __pycache__/
 .env
 .DS_Store
 .codegraph/
+
+# trained IndicBERT files: committed only once chosen for release
+resources/models/indicbert_*
+*.pt

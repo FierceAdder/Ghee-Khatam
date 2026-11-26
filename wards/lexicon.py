@@ -24,7 +24,8 @@ HONORIFICS_LATIN = frozenset({
     "bhabhi", "chacha", "chachu", "chachi", "mama", "mami", "mausi", "mausa", "nana",
     "nani", "dada", "dadi", "papa", "mummy", "uncle", "aunty", "tau", "tai", "jiju",
     "madam", "dadaji", "dadiji", "nanaji", "naniji", "chachaji", "pitaji", "akka", "anna",
-    "garu",
+    "garu", "paaji", "paji", "bhaji", "beji", "bibi", "begum", "khala", "khalu", "apa",
+    "baji", "boudi", "mashi", "kaku",
 })
 HONORIFICS_DEVANAGARI = (
     "जी", "साहब", "साहिब", "दीदी", "बहन", "बहनजी", "भाई", "भैया", "बाबू", "अम्मा", "माताजी",

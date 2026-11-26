@@ -184,8 +184,8 @@ def test_exposure_counts_match_a_hand_count(policy, lexicon):
     log = strict_log()
     pipeline = Pipeline(policy, Secret(SECRET), log, lexicon)
     pipeline.privacy.band_width = 15
-    pipeline._demographics = [("Sitapur", "F", 47), ("Sitapur", "F", 50),
-                              ("Sitapur", "M", 47), ("Unnao", "F", 30)]
+    pipeline._demographics = [("p1", "Sitapur", "F", 47), ("p2", "Sitapur", "F", 50),
+                              ("p3", "Sitapur", "M", 47), ("p4", "Unnao", "F", 30)]
     pipeline._log_privacy(Plan())
     line = json.loads(log.sealed(Secret(SECRET), "00").splitlines()[0])
     # 45-59/F/Sitapur is shared by two; the other two patients are alone in their group

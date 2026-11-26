@@ -54,9 +54,13 @@ def test_repository_holds_no_practice_identities(truth):
                     needles.add((entity["type"], surface, False))
     offenders = set()
     for path in _shipped_files():
-        text = unicodedata.normalize("NFKC", path.read_text(encoding="utf-8")).casefold()
+        # binary files (trained models) are searched too, for any text they hold
+        raw = path.read_bytes().decode("utf-8", errors="ignore")
+        text = unicodedata.normalize("NFKC", raw).casefold()
         joined = re.sub(r"(?<=\d)[ \-](?=\d)", "", text)
         for kind, needle, digits in sorted(needles):
+            if needle not in (joined if digits else text):
+                continue                        # a cheap test first: models are large
             edge = r"\d" if digits else r"[a-z\u0900-\u097f]"
             if re.search(rf"(?<!{edge}){re.escape(needle)}(?!{edge})",
                          joined if digits else text):

@@ -89,7 +89,7 @@ def record_names(record: Record, lexicon: Lexicon) -> list[tuple[Name, Mention]]
     parts: dict[Role, list[tuple[bool, Mention]]] = defaultdict(list)
     for segment, mention in record.mentions():
         # staff are not the patient and not a clue to who the patient is
-        if mention.etype not in NAME_TYPES or mention.source == CLIPPED \
+        if mention.etype not in NAME_TYPES or mention.source in (CLIPPED, "model") \
                 or mention.role is Role.STAFF:
             continue
         if segment.field in (F.FIRST_NAME, F.LAST_NAME) and mention.source == "field":
@@ -207,10 +207,12 @@ class Clusters:
 
 
 class Linker:
-    def __init__(self, lexicon: Lexicon, secret: Secret, phone_hub_groups: int = 3) -> None:
+    def __init__(self, lexicon: Lexicon, secret: Secret, phone_hub_groups: int = 3,
+                 fuzzy: bool = False) -> None:
         self.lexicon = lexicon
         self.secret = secret
         self.hub = phone_hub_groups
+        self.fuzzy = fuzzy
         self.stats: Counter = Counter()     # decisions, for the log (counts only)
 
     # ------------------------------------------------------------------ evidence
@@ -307,6 +309,8 @@ class Linker:
     def link(self, evidence: list[Evidence]) -> dict[int, str]:
         """Pseudonym for each evidence index that identifies a patient."""
         self.stats = Counter()
+        if self.fuzzy:
+            _unify_spellings(evidence)
         evidence_order = sorted(range(len(evidence)), key=lambda i: evidence[i].record.key)
         usable = [i for i in evidence_order
                   if evidence[i].anchored and not evidence[i].ambiguous]
@@ -455,6 +459,81 @@ class Linker:
         code = "".join(PSEUDONYM_ALPHABET[(number >> (5 * i)) & 31]
                        for i in range(PSEUDONYM_LENGTH))
         return PSEUDONYM_PREFIX + code
+
+
+# ------------------------------------------------------------- fuzzy spellings
+
+_FUZZY_MIN_LENGTH = 6          # consonant skeletons shorter than this are too common
+_FUZZY_SCORE = 0.95
+
+
+def jaro_winkler(a: str, b: str) -> float:
+    if a == b:
+        return 1.0
+    if not a or not b:
+        return 0.0
+    reach = max(len(a), len(b)) // 2 - 1
+    taken_a, taken_b = [False] * len(a), [False] * len(b)
+    matches = 0
+    for i, char in enumerate(a):
+        for j in range(max(0, i - reach), min(len(b), i + reach + 1)):
+            if not taken_b[j] and b[j] == char:
+                taken_a[i] = taken_b[j] = True
+                matches += 1
+                break
+    if not matches:
+        return 0.0
+    left = [c for c, t in zip(a, taken_a, strict=True) if t]
+    right = [c for c, t in zip(b, taken_b, strict=True) if t]
+    transpositions = sum(x != y for x, y in zip(left, right, strict=True)) / 2
+    jaro = (matches / len(a) + matches / len(b) + (matches - transpositions) / matches) / 3
+    prefix = 0
+    for x, y in zip(a[:4], b[:4], strict=False):
+        if x != y:
+            break
+        prefix += 1
+    return jaro + prefix * 0.1 * (1 - jaro)
+
+
+def _unify_spellings(evidence: list["Evidence"]) -> None:
+    """Treat nearly identical spellings of a name word as one before linking: same first
+    letter, long enough, Jaro-Winkler of at least 0.95 on the consonant skeletons. The merge
+    constraints (two Aadhaar numbers, two sexes, ages) still apply afterwards."""
+    keys = sorted({k for e in evidence for n in e.summary.names | e.summary.relatives
+                   for k in n.keys})
+    parent = {k: k for k in keys}
+
+    def find(k: str) -> str:
+        while parent[k] != k:
+            parent[k] = parent[parent[k]]
+            k = parent[k]
+        return k
+
+    blocks: dict[str, list[str]] = defaultdict(list)
+    for key in keys:
+        if len(key.split("|")[0]) >= _FUZZY_MIN_LENGTH:
+            blocks[key[:2]].append(key)
+    for block in blocks.values():
+        for i, a in enumerate(block):
+            for b in block[i + 1:]:
+                head_a, head_b = a.split("|")[0], b.split("|")[0]     # consonant skeletons
+                if abs(len(head_a) - len(head_b)) <= 3 \
+                        and jaro_winkler(head_a, head_b) >= _FUZZY_SCORE:
+                    ra, rb = find(a), find(b)
+                    if ra != rb:
+                        parent[max(ra, rb)] = min(ra, rb)
+    mapping = {k: find(k) for k in keys if find(k) != k}
+    if not mapping:
+        return
+
+    def remap(name: Name) -> Name:
+        keys_ = frozenset(mapping.get(k, k) for k in name.keys)
+        return Name(keys=keys_, given=frozenset(mapping.get(k, k) for k in name.given),
+                    size=len(keys_))
+
+    for item in evidence:
+        item.summary.names = {remap(n) for n in item.summary.names}
+        item.summary.relatives = {remap(n) for n in item.summary.relatives}
 
 
 def _strong_key(mention: Mention) -> tuple[str, str] | None:

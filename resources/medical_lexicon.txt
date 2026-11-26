@@ -129,3 +129,7 @@ hospital hospitals clinic nursing home sadan seva sansthan trust charitable
 multispeciality multispecialty speciality specialty institute centre center
 diagnostics diagnostic pathology pathlabs laboratories laboratory imaging pharmacy
 dispensary sanstha chikitsalaya aushadhalaya in-house inhouse
+
+# clinical abbreviations written in capitals in notes and histories
+htn dm dm2 tb att copd cad ihd ckd aki rta lscs nsaid ors sos tds hs prn ecg usg cbc lft kft
+rbs fbs ppbs hba1c icu hdu opd ipd ot ent obg ncd uti urti lrti af mi cva tia gerd bph

@@ -22,7 +22,7 @@ CLASS_NAME = re.compile(r"^[A-Z][A-Za-z0-9]{0,47}$")      # a Python exception c
 _HEX = re.compile(r"^[0-9a-f]{1,64}$")
 
 STAGES = frozenset({
-    "ingest", "parse", "detect", "sweep", "link", "conditions", "redact", "audit", "names",
+    "ingest", "parse", "detect", "sweep", "model", "link", "conditions", "redact", "audit", "names",
     "stage", "publish", "run"})
 
 # Every reason a file or a run can fail. A test checks that the code uses no other.
@@ -44,7 +44,7 @@ SOURCES = frozenset({
     "spoken_name", "patient_word", "relation", "relation_subject", "care_of", "role_after",
     "acted_by", "honorific", "title", "postposition", "possessive", "report_of",
     "before_age", "time_entry", "before_phone", "chat_sender", "staff_role", "staff_done_by",
-    "layout", "other"})
+    "layout", "model", "other"})
 
 ENTITIES = frozenset(e.value for e in EntityType)
 
@@ -76,6 +76,7 @@ EVENTS: dict[str, tuple[str, dict]] = {
     "file_entities": (DETAIL, {"file": INT, **dict.fromkeys(ENTITIES, INT)}),
     "file_sources": (DETAIL, {"file": INT, **dict.fromkeys(SOURCES, INT)}),
     "log": (SUMMARY, {"dropped": INT, "overflow": INT}),
+    "name_model": (SUMMARY, {"files_skipped": INT}),
     "seal": (SUMMARY, {"lines": INT, "report": HEX}),
 }
 

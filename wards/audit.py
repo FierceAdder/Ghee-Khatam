@@ -98,7 +98,7 @@ class Auditor:
 
     def remember(self, mention: Mention) -> None:
         value, etype = mention.value.strip(), mention.etype
-        if mention.source == CLIPPED:
+        if mention.source in (CLIPPED, "model"):
             return
         if etype in NAME_TYPES:
             if mention.priority < _MIN_NAME_PRIORITY:

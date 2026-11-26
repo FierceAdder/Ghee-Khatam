@@ -126,6 +126,7 @@ run.
 | Dates | shifted by a per-patient offset of 1 to 180 days, in the original format |
 | Age | band of 5 to 15 years, chosen once per release from how crowded district-and-sex groups are; `90+` from 90 |
 | Rare diagnosis | a code held by one patient becomes `R69` and its names `[CONDITION]`, in every patient record; documents about no one keep it |
+| Options (off by default unless noted) | `l_diversity` widens bands until each group holds that many diagnoses; `rare_diagnosis_mode` can write the ICD-10 category or chapter instead of `R69` (measured worse); `age_partitioning: mondrian` gives each group of patients its own age range; `name_matching: fuzzy` (on) joins near-identical name spellings before linking; `name_model` adds a learned check for names no rule found (`perceptron`, `crf` or `indicbert`) |
 | Birth date | `[DOB]`; a FHIR `birthDate` is dropped. `dob_mode` can be `shift` or `year`, but both reveal the birth year. Under an unfamiliar header, dates spread over ten years or more are treated as birth dates |
 | Village / tehsil / PIN | district / `[TEHSIL]` / 3-digit prefix |
 | Medicines, doses, vitals, labs, diagnoses, doctors, wards | unchanged |
@@ -250,7 +251,9 @@ changes still to be tried are in [docs/CHANGES_TO_TEST.md](docs/CHANGES_TO_TEST.
   those fixes added that copy's own words. With labels scrambled on top of new names, names
   that appear only once in free text still leak: 2 of 4 canaries survived (see SCORES.md).
 - A name in free text with no label, relation, honorific or similar context, that is in no
-  gazetteer and appears nowhere else in the dataset, is missed.
+  gazetteer and appears nowhere else in the dataset, is missed unless the learned name check
+  is on. With IndicBERT on, names leaked on the held-out test side fell from 7-14 to 0-1 per
+  dataset (SCORES.md); it adds about 12 s per 200 files and needs onnxruntime.
 - All-lower-case names in prose are only found when another record already revealed them.
 - Typing fields by their values can over-redact: capitalised phrases in an unfamiliar
   column beside identifiers may be taken for names, and a column of dates spread over ten

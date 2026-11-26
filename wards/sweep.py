@@ -57,7 +57,8 @@ class NameSweeper:
 
     def register(self, mention: Mention) -> None:
         """Remember a detected name for the dataset-wide search."""
-        if mention.etype not in NAME_TYPES or mention.source in ("path", "known"):
+        # a learned guess is redacted where it was found but never searched for elsewhere
+        if mention.etype not in NAME_TYPES or mention.source in ("path", "known", "model"):
             return
         words = name_tokens(mention.value, self.lexicon)
         keys = tuple(k for k in (self.lexicon.name_key(w) for w in words) if k)

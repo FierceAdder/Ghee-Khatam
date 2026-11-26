@@ -24,6 +24,22 @@ from wards.model import FieldType as F
 CODE_REPLACEMENT = "R69"             # ICD-10: illness, unspecified
 NAME_REPLACEMENT = "[CONDITION]"
 
+# ICD-10 chapters by code range (WHO ICD-10, 2019 edition).
+_CHAPTERS = ("A00-B99", "C00-D48", "D50-D89", "E00-E90", "F00-F99", "G00-G99", "H00-H59",
+             "H60-H95", "I00-I99", "J00-J99", "K00-K93", "L00-L99", "M00-M99", "N00-N99",
+             "O00-O99", "P00-P96", "Q00-Q99", "R00-R99", "S00-T98", "V01-Y98", "Z00-Z99",
+             "U00-U99")
+
+
+def generalise(code: str, mode: str) -> str:
+    """A rare code as written in the release: removed, its category, or its chapter."""
+    if mode == "category":
+        return code[:3]
+    if mode == "chapter":
+        category = code[:3]
+        return next((r for r in _CHAPTERS if r[:3] <= category <= r[4:]), CODE_REPLACEMENT)
+    return CODE_REPLACEMENT
+
 _ICD = r"[A-TV-Z]\d{2}(?:\.\d{1,2})?"
 _ICD_VALUE = re.compile(rf"^{_ICD}$")
 _NAME_THEN_CODE = re.compile(
@@ -97,7 +113,7 @@ class ConditionPlan:
 
     def decide(self, records: Iterable[tuple[str, Record]]) -> None:
         """``records`` pairs every linked record with its patient's pseudonym."""
-        if self.threshold <= 0 or not self.names:
+        if not self.names:
             return
         everything = self._compile(self.names)
         holders: dict[str, set[str]] = defaultdict(set)
@@ -111,7 +127,8 @@ class ConditionPlan:
                     holders[by_name[" ".join(m.group(0).split()).casefold()]].add(patient)
         self.holders = dict(holders)
         self.rare = frozenset(code for code, patients in holders.items()
-                              if len(patients) <= self.threshold)
+                              if len(patients) <= self.threshold) if self.threshold > 0 \
+            else frozenset()
         if self.rare:
             self._codes, self._words = self._compile(
                 {code: self.names[code] for code in self.rare})

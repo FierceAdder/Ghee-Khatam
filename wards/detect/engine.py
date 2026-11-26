@@ -58,8 +58,13 @@ def resolve(mentions: Iterable[Mention], text: str) -> list[Mention]:
         if merged and mention.start < merged[-1].end:
             last = merged[-1]
             strong = max(last, mention, key=lambda m: (m.priority, m.end - m.start))
+            weak = mention if strong is last else last
             start, end = last.start, max(last.end, mention.end)
-            merged[-1] = Mention(strong.etype, start, end, text[start:end], role=strong.role,
+            # a known role (patient, relative, staff) is never replaced by "unknown"
+            role, etype = strong.role, strong.etype
+            if role is Role.UNKNOWN and weak.role is not Role.UNKNOWN:
+                role, etype = weak.role, weak.etype
+            merged[-1] = Mention(etype, start, end, text[start:end], role=role,
                                  priority=strong.priority, source=strong.source, data=strong.data)
         else:
             merged.append(mention)

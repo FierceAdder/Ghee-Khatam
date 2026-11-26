@@ -12,7 +12,7 @@ import unicodedata
 from collections import Counter
 from dataclasses import dataclass, field
 
-from wards.clinical import CODE_REPLACEMENT, NAME_REPLACEMENT
+from wards.clinical import NAME_REPLACEMENT, generalise
 from wards.knowledge import Knowledge
 from wards.lexicon import Lexicon
 from wards.link import name_tokens
@@ -126,7 +126,9 @@ class Redactor:
                      context: PatientContext) -> str | None:
         etype = mention.etype
         if etype is E.DIAGNOSIS:
-            return CODE_REPLACEMENT if mention.data == "code" else NAME_REPLACEMENT
+            if mention.data == "code":
+                return generalise(mention.value.strip(), self.privacy.policy.rare_diagnosis_mode)
+            return NAME_REPLACEMENT
         if segment.constrained:
             return "redacted"
         if etype in NAME_TYPES:
@@ -147,10 +149,10 @@ class Redactor:
             return value if value is not None else TOKENS[E.DOB]
         if etype is E.AGE:
             if mention.data == "infant":
-                return self.privacy.age_band(0)
+                return self.privacy.age_band(0, context.pseudonym)
             if not mention.value.isdigit():
                 return TOKENS[E.AGE]
-            return self.privacy.age_band(int(mention.value))
+            return self.privacy.age_band(int(mention.value), context.pseudonym)
         if etype is E.PIN:
             return self.privacy.pin_prefix(mention.value)
         if etype is E.VILLAGE:
