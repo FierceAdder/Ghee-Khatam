@@ -119,6 +119,8 @@ class Pipeline:
         for state in states:
             state.reason = state.item.reason
         self.log.record("run_started", files=len(states), policy=_digest(self.policy))
+        if self.policy.name_model != "off" and self.name_model is None:
+            self.log.record("problem", stage="model", reason="other", error="ImportError")
         self._stage_done("ingest", states)
 
         self._each(states, "parse", self._parse, needs_doc=False)
@@ -590,13 +592,15 @@ def _demographics(evidence, assigned: dict[int, str],
 
 
 def _load_name_model(backend: str, lexicon: Lexicon):
-    """The learned name check chosen in the policy; refuse to start if it cannot load."""
+    """The learned name check chosen in the policy, or ``None``. It only adds detections,
+    so if its packages or files are missing the run continues on the rules alone (the
+    pipeline logs that) rather than failing."""
     if backend == "off":
         return None
     try:
         return NameModel(backend, lexicon)
     except (ImportError, OSError, ValueError, KeyError):
-        raise ConfigError("name_model_unavailable") from None
+        return None
 
 
 def _digest(policy: Policy) -> str:

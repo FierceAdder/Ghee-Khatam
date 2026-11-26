@@ -1,12 +1,15 @@
 ARG PYTHON_VERSION=3.12
 
-# ---- the firewall itself: standard library only, nothing to download at run time
+# ---- the firewall itself: nothing is downloaded at run time
 FROM python:${PYTHON_VERSION}-slim AS base
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
-    PYTHONUTF8=1
+    PYTHONUTF8=1 \
+    OMP_NUM_THREADS=2
 WORKDIR /app
-COPY main.py raksha.toml requirements.txt pyproject.toml ./
+COPY requirements.txt ./
+RUN pip install --no-cache-dir -r requirements.txt
+COPY main.py raksha.toml pyproject.toml ./
 COPY config ./config
 COPY resources ./resources
 COPY wards ./wards

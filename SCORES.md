@@ -193,6 +193,24 @@ Scores vary noticeably with the secret: since Phase 9 changed the keys that seed
 patient's date shift, one secret moved the targeted attack from 0.45 to 0.53 for the same
 code. Privacy decisions from here use 10 secrets.
 
+## Phase 15: released configuration
+
+IndicBERT on (`name_model: indicbert`), fuzzy spellings on, everything else as before.
+
+| Measure | Value |
+|---|---|
+| Practice data | 0 of 3,230 visible, 0 of 4 canaries, medical 99.0 %, linking 1.00 / 1.00 |
+| Same secret twice; different secret; input unchanged | identical; different; unchanged |
+| Docker (Linux, 2 CPUs) against macOS, same secret | byte-identical `sanitized/` and `records.jsonl` |
+| Docker, 2 CPUs: practice (200 files) | 26.6 s, 334 MB |
+| Docker, 2 CPUs: 2,000 files (copies of practice) | 30.2 s, 497 MB |
+| Docker, 2 CPUs: 133 unique generated files | 22.0 s, 328 MB (about 0.17 s per file) |
+| Tests | 765 pass locally (model packages absent: rules only); 764 pass and 1 skipped in Docker (model on) |
+
+The learned check has an 8-minute budget: at about 0.17 s per unique file it covers roughly
+2,900 files on 2 CPUs, and files beyond it are processed by the rules alone (counted in the
+log as `name_model files_skipped`).
+
 ## Attack replay and utility estimate
 
 Averaged over three secrets. "Score" is 25 x privacy + 20 x utility (out of 45). Attack

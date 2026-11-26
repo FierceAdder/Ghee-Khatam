@@ -16,6 +16,7 @@ to write into the repository unless the input is under ``docs/examples/``.
 from __future__ import annotations
 
 import argparse
+from dataclasses import replace
 import contextlib
 import io
 import json
@@ -249,7 +250,8 @@ class Explainer:
             f"{k} {v}" for k, v in stats.items())
 
     def r_stats(self):
-        line = next(json.loads(x) for x in self.log.splitlines() if '"linking"' in x)
+        line = next(json.loads(x) for x in self.log.splitlines()
+                    if json.loads(x)["event"] == "linking")
         return {k: v for k, v in line.items() if isinstance(v, int) and k not in ("seq",)}
 
     def _privacy(self) -> str:
@@ -258,7 +260,8 @@ class Explainer:
             if context.pseudonym and context.pseudonym not in seen:
                 seen.add(context.pseudonym)
                 rows.append([context.pseudonym, f"{context.offset:+d} days"])
-        privacy = next(json.loads(x) for x in self.log.splitlines() if '"privacy"' in x)
+        privacy = next(json.loads(x) for x in self.log.splitlines()
+                       if json.loads(x)["event"] == "privacy")
         return _table(["Patient", "Date shift"], rows) + (
             f"\n\nAge band width chosen for this release: {privacy['age_band_years']} years. "
             f"Diagnoses held by one patient and suppressed: {privacy['suppressed_codes']}. "
@@ -319,8 +322,10 @@ def explain(source: Path, template: Path, destination: Path) -> str:
         for patch in recorder.patches():
             stack.enter_context(patch)
         output = Path(folder) / "release"
-        Pipeline(load_policy(ROOT / "config" / "policy.yaml"), Secret(DEMO_SECRET),
-                 SafeLog(io.StringIO())).run(source, output)
+        # the learned name check is left off so this page is the same with or without its
+        # packages installed; it is described in the text
+        policy = replace(load_policy(ROOT / "config" / "policy.yaml"), name_model="off")
+        Pipeline(policy, Secret(DEMO_SECRET), SafeLog(io.StringIO())).run(source, output)
         log = (output / "logs" / "run.jsonl").read_text(encoding="utf-8")
         explainer = Explainer(source, output, recorder, log)
         text = template.read_text(encoding="utf-8")

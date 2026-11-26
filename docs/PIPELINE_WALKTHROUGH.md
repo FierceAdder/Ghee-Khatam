@@ -131,6 +131,12 @@ on **known words** fail when a hospital words things differently; findings that 
 The medical veto runs last and can only remove a finding: it keeps doctors' names,
 disease names, doses and the ASHA role.
 
+After the rules, a learned check (IndicBERT, fine-tuned to tag name words) reads the free
+text for names no rule found, such as a name written once with no label. It only adds
+detections, is never used to link records, and is left off on this page so the page is the
+same with or without its packages installed. In this example the rules already find every
+name.
+
 **`lab/report_9812345670.json`**
 
 | Found | As | Detector | Relies on |

@@ -4,8 +4,11 @@ An offline, CPU-only, LLM-free firewall that cleans a folder of hospital records
 Hindi and Hinglish. It removes personal data, keeps medical values exactly, gives each
 patient one keyed pseudonym across files, and quarantines whatever it cannot clean.
 
-- **No dependencies.** Python 3.10+ standard library only.
-- **No models.** Rules, gazetteers and transliteration; nothing is trained or downloaded.
+- **Few dependencies.** Python 3.10+; the rules use the standard library only. The learned
+  name check needs onnxruntime, sentencepiece and numpy (`requirements.txt`); without them
+  the firewall runs on its rules alone and the log says so.
+- **One small model, declared below.** No LLM, nothing generative, nothing downloaded at
+  run time.
 - **Deterministic.** Same input and `RAKSHA_SECRET` give byte-identical output.
 
 ## Repository layout
@@ -18,7 +21,7 @@ hackathon/
 ├── Secret-Wards-Toolkit/    the organisers' kit (read and test with it)
 └── Ghee-Khatam/             this repository
     ├── raksha.toml          how the evaluator runs us
-    ├── requirements.txt     empty: standard library only
+    ├── requirements.txt     onnxruntime, sentencepiece, numpy (the learned name check)
     ├── README.md
     ├── main.py
     ├── config/policy.yaml   privacy rules
@@ -186,6 +189,26 @@ dataset-wide rules (the age-band width, rare-diagnosis suppression), never by ch
 individual patients; wider settings were measured and cost more utility than they saved
 (SCORES.md).
 
+## Model declaration
+
+As the rules require, every model the firewall uses:
+
+| | |
+|---|---|
+| Model | IndicBERT (`ai4bharat/indic-bert`), an ALBERT encoder pretrained on 12 Indian languages including Hindi and English |
+| Size | 33.4 million parameters (the cap is 50 million); shipped as 8-bit ONNX, 62 MB, in `resources/models/` |
+| Licence | MIT |
+| What we added | a two-way tagging layer, fine-tuned for 3 epochs to mark words that are part of a person's name (`tools/train_indicbert.py`) |
+| Trained on | invented records from our generator's training side only (`tools/generator`); no practice or test data |
+| Role | after the rules, it reads free text for names no rule found and adds detections; it never removes one, never links records, and doctors, diseases and doses stay protected by the rules |
+| Run time | about 0.17 s per file on 2 CPUs, within an 8-minute budget; files beyond it get rules only |
+| Turn off | `name_model: off` in `config/policy.yaml` |
+
+Also included, but not used by default: a CRF (`resources/models/name_crf.crfsuite`, needs
+python-crfsuite) and an averaged perceptron (`name_perceptron.json`) over hand-made features,
+and a letter n-gram name-likeness table (`name_likeness.json`). All were trained on
+generated data only.
+
 ## Measured results
 
 Practice data, `check_dev.py` and our own tools, 26 Nov 2026. Not the official score.
@@ -194,12 +217,14 @@ Practice data, `check_dev.py` and our own tools, 26 Nov 2026. Not the official s
 |---|---|
 | Personal data still visible | 0 of 3,230 pieces (English, Hindi and Hinglish) |
 | Planted canaries found in the output | 0 of 4 |
-| Medical values kept | 99.2 % (the rest are five one-patient diagnoses, removed on purpose) |
+| Medical values kept | 99.0 % (five one-patient diagnoses removed on purpose; a few words taken for names by the learned check) |
 | Linking precision / recall / F0.5 | 1.00 / 1.00 / 1.00 |
 | Intervals between a patient's events | 100 % exact |
 | Records still revealing a birth year | 0 of 111 |
-| Time, peak memory (200 files) | 1.7 s, 67 MB |
-| 2,000 files (6 MB) / 8,000 files (25 MB), copies of the practice data | 18 s, 215 MB / 64 s, 788 MB |
+| Time, peak memory (200 files), Docker on 2 CPUs | 26.6 s, 334 MB (1.7 s and 67 MB without the learned check) |
+| 2,000 files, copies of the practice data, Docker on 2 CPUs | 30 s, 497 MB (repeated lines are scored once) |
+| Unique generated files, Docker on 2 CPUs | about 0.17 s per file |
+| Same secret twice; Docker against macOS | byte-identical output |
 
 Altered copies, results on wording the first version had not seen, and the attack replay
 are in [SCORES.md](SCORES.md).

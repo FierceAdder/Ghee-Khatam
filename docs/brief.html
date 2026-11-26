@@ -64,7 +64,9 @@ digits, homoglyphs, escapes, entities and percent-encoding, with offsets back to
 Base64 and hex payloads are inspected.</li>
 <li><b>Detection:</b> identifier patterns, labels, relation words (S/o, W/o, पुत्र),
 honorifics, chat senders and layout cues find names that are in no list; name and district
-lists help. Unfamiliar column headers and JSON keys are typed by what their values look like.
+lists help. Unfamiliar headers, JSON keys and form labels are typed by what their values look
+like across the dataset. Then a fine-tuned <b>IndicBERT</b> (33.4M parameters, MIT) reads free
+text for names no rule found; it only adds detections and never links records.
 A medical veto keeps doctors, hospitals, disease eponyms, the ASHA role, doses and
 <code>1-0-1</code>. Identifiers learned in one file are removed from all, file names included.</li>
 <li><b>Linkage:</b> union-find over strong identifiers first, then name plus a second clue
@@ -85,9 +87,8 @@ for every identifier, full name and address phrase detected in the input. Each f
 re-read and structure-checked; a failed run publishes no records and says so.</li>
 <li><b>Measured privacy.</b> Our replay of attacks A1–A7 and estimate of the utility formula
 decide each setting; ideas that cost more utility than they saved were dropped.</li>
-<li><b>Works without name lists.</b> With every name list removed, no personal data surfaced
-on the practice data or our first altered copy. New names in scrambled wording still leak
-(2 of 4 canaries survived a stress test).</li>
+<li><b>Tested on data we did not tune on.</b> Our generator builds records with exact answer
+keys and keeps name regions, wordings and layouts held out; a version is judged on those.</li>
 </ul>
 
 <div class="page2">
@@ -95,12 +96,12 @@ on the practice data or our first altered copy. New names in scrambled wording s
 <table>
 <tr><th style="width:44%">Measure</th><th>Value</th></tr>
 <tr><td>Personal data leaked (overall / Hindi / Hinglish)</td><td>0 % / 0 % / 0 % (0 of 3,230 pieces); canaries 0 of 4</td></tr>
-<tr><td>Medical values kept</td><td>99.2 % (the loss is five one-patient diagnoses, on purpose)</td></tr>
+<tr><td>Medical values kept</td><td>99.0 % (mostly five one-patient diagnoses, on purpose)</td></tr>
 <tr><td>Linking precision / recall / F0.5</td><td>1.00 / 1.00 / 1.00; homonym pairs kept apart 2 of 2</td></tr>
 <tr><td>Event intervals exact; birth years revealed</td><td>100 % of 15,757 pairs; 0 of 111 records</td></tr>
 <tr><td>Re-identification risk, our replay, relative to raw input</td><td>direct exposure 0; record linkage 0.12; profile 0.26; targeted 0.45 (3-secret mean, up to 0.53)</td></tr>
 <tr><td>Estimated utility / privacy</td><td>0.956 / 0.817</td></tr>
-<tr><td>Time and peak memory</td><td>200 files: 1.7 s, 67 MB; 2,000: 18 s, 215 MB; 8,000 (25 MB): 64 s, 788 MB</td></tr>
+<tr><td>Time and peak memory, Docker, 2 CPUs</td><td>200 files: 26.6 s, 334 MB (1.7 s without IndicBERT); about 0.17 s per unique file; identical output on Linux and macOS</td></tr>
 </table>
 <p>Estimates, not the official evaluator. Each choice below was compared on
 25 × privacy + 20 × utility (maximum 45):</p>
@@ -111,17 +112,17 @@ on the practice data or our first altered copy. New names in scrambled wording s
 <tr><td>Suppress one-patient diagnoses</td><td>Targeted attack 0.52 to 0.45; utility 0.966 to 0.956. Thresholds of 2 to 5 patients scored lower.</td></tr>
 </table>
 
-<p><b>Data we had not tuned on.</b> We built altered copies with new names, headers, keys,
-labels, date formats, encodings and folders, each with an exact answer key.</p>
+<p><b>Data we had not tuned on.</b> Generated test sets use only held-out name regions
+(North-east, South, Adivasi, West), label wordings and layouts (referral slips, MCH cards,
+medico-legal registers, handover notes…); seeds 4–6 were generated after every choice.</p>
 <table>
-<tr><th>Run</th><th>Leaked</th><th>Medical kept</th><th>Linking P / R / F0.5</th></tr>
-<tr><td>Unfamiliar wording, first sight (before fixes)</td><td>7.4 % (Hindi 18.2 %, Hinglish 34.2 %), 1 canary</td><td>98.9 %</td><td>0.96 / 0.50 / 0.81</td></tr>
-<tr><td>Same copy and two more, after fixes (tuned)</td><td>0 %</td><td>99.2 %</td><td>1.00 / 0.99 / 1.00</td></tr>
-<tr><td><b>Held-out wording (also ours), first run</b></td><td>0 %, but birth year visible in 10 of 111 records</td><td>99.2 %</td><td>1.00 / 0.95 / 0.99</td></tr>
+<tr><th>Unseen test sets (3)</th><th>Leaked</th><th>Names leaked</th><th>Canaries</th><th>Linking P / R</th></tr>
+<tr><td>Phase 12, first run</td><td>7.7–8.0 %</td><td>—</td><td>0</td><td>0.94–1.00 / 0.73–0.74</td></tr>
+<tr><td>Rules only, final</td><td>2.4–2.9 %</td><td>13 / 7 / 14</td><td>0 / 1 / 0</td><td>0.95–1.00 / 0.67–0.79</td></tr>
+<tr><td><b>Rules + IndicBERT, final</b></td><td><b>1.2–1.9 %</b></td><td><b>1 / 0 / 0</b></td><td>0</td><td>0.95–1.00 / 0.67–0.79</td></tr>
 </table>
-<p>That run exposed one defect (a <code>D.O.B.</code> header read as “daughter of”), since fixed.
-Some fixes added the reworded copy's own words, one author wrote all alterations and fixes, and
-every copy reuses the practice layouts, so <b>expect worse on truly new formats</b>.</p>
+<p>The same author wrote the generator and the fixes, so <b>expect worse on truly new
+formats</b>; linking on unseen layouts is the weakest part.</p>
 
 <h2>6. Security design</h2>
 <ul>
@@ -140,8 +141,8 @@ error removes staged files, writes a report marked failed and exits non-zero.</l
 <ul>
 <li>The targeted attack still succeeds about half the time: diagnoses shared by two or three
 patients are kept.</li>
-<li>A name with no cue, in no list and seen nowhere else is missed, as are most lower-case
-names. The self-scan cannot find what detection never saw.</li>
+<li>Linking recall on unseen layouts is 0.67–0.79. IndicBERT covers about 2,900 unique files in
+its 8-minute budget on 2 CPUs; files beyond it get rules only.</li>
 <li>Typing by values may over-redact unfamiliar columns. A birth date unlabelled everywhere is
 only shifted.</li>
 <li>Privacy settings rest on 48 patients. Memory grows with input; about five times the 25 MB
