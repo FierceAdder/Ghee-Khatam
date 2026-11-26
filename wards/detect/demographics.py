@@ -55,7 +55,7 @@ def detect_ages(text: str) -> list[Mention]:
 
 
 _DOB_CONTEXT = _compile(
-    r"(?:(?<![A-Za-z])(?:D\.?O\.?B\.?|Date[ \t]+of[ \t]+Birth|Birth[ \t]*Date|Born(?:[ \t]+on)?)"
+    r"(?:(?<![A-Za-z])(?:D[./]?O[./]?B\.?|Date[ \t]+of[ \t]+Birth|Birth[ \t]*Date|Born(?:[ \t]+on)?)"
     r"|जन्म[ \t]*(?:तिथि|दिनांक|तारीख)?)[ \t]*(?:\([^)\n]*\))?[ \t]*[:\-=]?[ \t]*$",
     re.IGNORECASE)
 

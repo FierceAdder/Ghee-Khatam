@@ -31,7 +31,8 @@ def _shipped_files():
     """Everything of ours that goes into the repository, except the team's planning notes."""
     folders = ("wards", "resources", "config", "tools", "tests", "docs")
     files = [p for name in folders for p in sorted((ROOT / name).rglob("*"))
-             if p.is_file() and "__pycache__" not in p.parts and p.name != ".DS_Store"]
+             if p.is_file() and "__pycache__" not in p.parts and p.name != ".DS_Store"
+             and p.suffix != ".pdf"]      # a PDF is made from a source that is scanned
     return files + [p for p in (ROOT / "main.py", ROOT / "README.md", ROOT / "SCORES.md")
                     if p.is_file()]
 

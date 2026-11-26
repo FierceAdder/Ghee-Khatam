@@ -23,7 +23,8 @@ HONORIFICS_LATIN = frozenset({
     "bahen", "bahenji", "ben", "bhai", "bhaiya", "bhaiyya", "babu", "amma", "mataji",
     "bhabhi", "chacha", "chachu", "chachi", "mama", "mami", "mausi", "mausa", "nana",
     "nani", "dada", "dadi", "papa", "mummy", "uncle", "aunty", "tau", "tai", "jiju",
-    "madam",
+    "madam", "dadaji", "dadiji", "nanaji", "naniji", "chachaji", "pitaji", "akka", "anna",
+    "garu",
 })
 HONORIFICS_DEVANAGARI = (
     "जी", "साहब", "साहिब", "दीदी", "बहन", "बहनजी", "भाई", "भैया", "बाबू", "अम्मा", "माताजी",
@@ -145,6 +146,10 @@ class Lexicon:
             stem = word[:-1]
             return stem in self.stopwords or stem in self.medical
         return False
+
+    def is_medical(self, token: str) -> bool:
+        """A medicine or condition word (which may also be somebody's name)."""
+        return clean_token(token) in self.medical
 
     def is_first_name(self, token: str) -> bool:
         word = self.canonical(token)

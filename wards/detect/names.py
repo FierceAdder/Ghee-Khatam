@@ -9,7 +9,7 @@ from __future__ import annotations
 import re
 import unicodedata
 
-from wards.detect.tokens import Tokens
+from wards.detect.tokens import MAX_NAME_TOKENS, Tokens
 from wards.lexicon import HONORIFICS_DEVANAGARI, HONORIFICS_LATIN, KINSHIP, Lexicon
 from wards.model import EntityType as E
 from wards.model import Mention, Role
@@ -49,7 +49,8 @@ _RELATIVE_LABEL = _compile(
 # S/o, D/o, W/o are always followed by a person.
 _RELATION = _compile(
     r"(?:(?<![A-Za-z/])(?:[sdw][ \t]*/[ \t]*o|son[ \t]+of|daughter[ \t]+of|wife[ \t]+of|"
-    r"husband[ \t]+of)(?![A-Za-z])|(?:सुपुत्री|सुपुत्र|पुत्री|पुत्र|धर्मपत्नी|पत्नी|आत्मजा|आत्मज)"
+    r"husband[ \t]+of|spouse(?:[ \t]+of)?|child[ \t]+of|ward[ \t]+of|care[ \t]*giver)"
+    r"(?![A-Za-z])|(?:सुपुत्री|सुपुत्र|पुत्री|पुत्र|धर्मपत्नी|पत्नी|आत्मजा|आत्मज)"
     r"(?![\u0900-\u097f]))\.?[ \t]*[:\-]?[ \t]*", re.IGNORECASE)
 
 # "C/O" may mean "care of <person>" or "complains of <symptom>".
@@ -96,6 +97,10 @@ _SPOKEN_NAME = _compile(r"(?<![A-Za-z\u0900-\u097f])(?:naam|नाम)[ \t]+(?:h
 _GIVEN_AFTER_COMMA = re.compile(r",[ \t]*")
 _NAME_ENDS = re.compile(r"[ \t]*(?:[|;\n\r]|$)|[ \t]{2,}")
 
+# "<name>      Age: ..." : forms put the name just left of the age column.
+_BEFORE_AGE = _compile(
+    r"(?:[ \t]{2,}|\t)(?=(?:आयु|उम्र|Age(?![A-Za-z])|AGE(?![A-Za-z])|Yrs|Sex(?![A-Za-z])))")
+
 _PRE_PHONE_GAP = re.compile(
     r"(?i)^[ \t,;:\-–()]*(?:(?:mob(?:ile)?|ph(?:one)?|contact|no|number|call|on|at|मोबाइल|फोन)"
     r"\.?[ \t,;:\-–()]*){0,3}$")
@@ -118,7 +123,18 @@ def _after(tokens: Tokens, position: int) -> list[int]:
     index = tokens.index_at_or_after(position)
     if index >= len(tokens) or tokens[index].start != position:
         return []
-    return tokens.run_forward(index)
+    return tokens.run_forward(index) or _medical_given_name(tokens, index)
+
+
+def _medical_given_name(tokens: Tokens, index: int) -> list[int]:
+    """"Patient Parkinson <surname>": after words that introduce a person, a capitalised
+    medical word followed by a known name is the first part of that name."""
+    word = tokens[index]
+    if not (word.deva or word.text[0].isupper()) or not tokens.lexicon.is_medical(word.text) \
+            or index + 1 >= len(tokens) or not tokens.joined(index, index + 1):
+        return []
+    rest = tokens.run_forward(index + 1, limit=MAX_NAME_TOKENS - 1)
+    return [index, *rest] if rest and tokens.known(rest) else []
 
 
 def _before(tokens: Tokens, position: int, gap: str = r"[ \t,]*") -> list[int]:
@@ -248,6 +264,10 @@ class NameDetector:
             run = _before(tokens, m.start(), r"")
             if run:
                 found.append(_mention(tokens, run, Role.PATIENT, 61, "possessive"))
+        for m in _BEFORE_AGE.finditer(text):
+            run = _before(tokens, m.start(), r"")
+            if run:
+                found.append(_mention(tokens, run, Role.PATIENT, 63, "before_age"))
         # "14:00 - Md. Temjen - K/C/O ..." in nursing notes
         for m in _TIME_DASH.finditer(text):
             run = _after(tokens, m.end())

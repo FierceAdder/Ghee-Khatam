@@ -9,6 +9,7 @@ from __future__ import annotations
 import re
 import unicodedata
 
+from wards.columns import VILLAGE_ENDING
 from wards.lexicon import Lexicon
 from wards.model import EntityType as E
 from wards.model import Mention, Role
@@ -58,6 +59,18 @@ _PLACE_PIN = _compile(
 _RESIDENT_OF = _compile(
     r"(?<![A-Za-z])R[ \t]*/[ \t]*[Oo]\.?[ \t]+(?P<body>(?:[^,;\n]{1,60},[ \t]*){1,6}?"
     r"(?:Distt?\.?|District|जिला|ज़िला)[ \t]*[:\-]?[ \t]*[A-Za-z\u0900-\u097f]+)")
+# "<... मंदिर के पास>" is a landmark wherever it is written.
+_LANDMARK_HINDI_FREE = _compile(
+    r"(?:[\u0900-\u0963\u0971-\u097f]+[ \t]){0,3}(?:मंदिर|मस्जिद|गुरुद्वार[ेा]|भवन|स्कूल|"
+    r"विद्यालय|टंकी|चौक|स्टेशन|बाज़ार|बाजार)[ \t]*(?:के|की)[ \t]*(?:पास|पीछे|सामने|निकट|बगल)"
+    r"(?![\u0900-\u097f])")
+# Two-word villages ("X Kalan", "X खुर्द") and a short labelled line ending in a village.
+_VILLAGE_PAIR = _compile(
+    r"(?<![A-Za-z\u0900-\u097f])(?-i:[A-Z][a-z]+|[\u0900-\u0963\u0971-\u097f]+)[ \t]"
+    r"(?:Kalan|Khurd|Khera|Purwa|कलां|खुर्द|खेड़ा|पुरवा)(?![A-Za-z\u0900-\u097f])")
+_VILLAGE_LINE = re.compile(r"(?m)^[ \t]*\S+[ \t]*[:\-]?[ \t]+(?P<v>\S+)[ \t]*$")
+_CARE_OF_WARD = _compile(
+    r"(?<![A-Za-z/])C[ \t]*/[ \t]*O[^\n]{0,60}?(?<![A-Za-z])(?P<v>Ward[ \t]*\d+)(?![\d(])")
 _ADDRESS_LINE = _compile(
     r"(?:(?<![A-Za-z])(?:Permanent[ \t]+|Present[ \t]+|Residential[ \t]+)?(?:Address|Addr\.?|R/o)"
     r"(?![A-Za-z])|पता(?![\u0900-\u097f])|निवास(?:[ \t]+स्थान)?)(?:[ \t]*\([^)\n]*\))?[ \t]*[:\-–][ \t]*"
@@ -220,6 +233,18 @@ class AddressDetector:
             words = m.group("place").split()
             if self.lexicon.district(m.group("place")) or self.lexicon.district(words[-1]):
                 add(E.PIN, m.start("v"), m.end("v"), 77)
+        for m in _LANDMARK_HINDI_FREE.finditer(text):
+            add(E.LANDMARK, m.start(), m.end(), 70)
+        for m in _VILLAGE_PAIR.finditer(text):
+            add(E.VILLAGE, m.start(), m.end(), 66)
+        for m in _CARE_OF_WARD.finditer(text):
+            add(E.LOCALITY, m.start("v"), m.end("v"), 72)
+        for m in _VILLAGE_LINE.finditer(text):
+            word = m.group("v")
+            if len(word) >= 5 and VILLAGE_ENDING.search(word) \
+                    and (not word.isascii() or word[0].isupper()) \
+                    and not self.lexicon.district(word) and not self.lexicon.is_stopword(word):
+                add(E.VILLAGE, m.start("v"), m.end("v"), 62)
         for pattern, etype in ((_VILLAGE_LABEL, E.VILLAGE), (_TEHSIL_LABEL, E.TEHSIL)):
             for m in pattern.finditer(text):
                 value = self._place_words(m.group("v"))

@@ -81,16 +81,31 @@ class TextView:
         return cls(source, text, starts, ends)
 
     def source_span(self, start: int, end: int) -> tuple[int, int]:
-        """Map a non-empty view span to the matching slice of the original string."""
+        """Map a non-empty view span to the matching slice of the original string.
+
+        The slice is widened to whole characters: replacing a letter but not its vowel
+        sign would leave a stray mark, and part of the word, behind.
+        """
         if not 0 <= start < end <= len(self.text):
             raise ValueError("span_out_of_range")
         if self._starts is None or self._ends is None:
-            return start, end
-        return self._starts[start], self._ends[end - 1]
+            low, high = start, end
+        else:
+            low, high = self._starts[start], self._ends[end - 1]
+        source = self.source
+        while low > 0 and _is_mark(source[low]):
+            low -= 1
+        while high < len(source) and _is_mark(source[high]):
+            high += 1
+        return low, high
 
     def source_text(self, start: int, end: int) -> str:
         low, high = self.source_span(start, end)
         return self.source[low:high]
+
+
+def _is_mark(char: str) -> bool:
+    return not char.isascii() and unicodedata.category(char).startswith("M")
 
 
 def _fold(piece: str) -> str:

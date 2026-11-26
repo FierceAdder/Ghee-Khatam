@@ -5,6 +5,7 @@ from __future__ import annotations
 import base64
 import binascii
 import re
+import unicodedata
 from collections.abc import Iterable
 
 from wards.detect.address import AddressDetector
@@ -13,7 +14,7 @@ from wards.detect.ids import detect_ids
 from wards.detect.names import NameDetector
 from wards.detect.tokens import Tokens
 from wards.lexicon import HONORIFICS_LATIN, Lexicon
-from wards.model import NAME_TYPES, Channel, Document, Mention, Role, Segment
+from wards.model import CLIPPED, NAME_TYPES, Channel, Document, Mention, Role, Segment
 from wards.model import EntityType as E
 from wards.model import FieldType as F
 from wards.veto import Veto
@@ -44,7 +45,11 @@ _PERSON_INDEX = re.compile(r"(?i)(?:name|patient|naam|नाम|मरीज)")
 
 
 def resolve(mentions: Iterable[Mention], text: str) -> list[Mention]:
-    """Non-overlapping mentions. Overlapping names are merged so no fragment survives."""
+    """Non-overlapping mentions that cover everything any detector found.
+
+    Overlapping names are merged. Otherwise the stronger mention wins and what the weaker
+    one covered beyond it is kept as a clipped mention, so no fragment survives.
+    """
     names = sorted((m for m in mentions if m.etype in NAME_TYPES), key=lambda m: (m.start, m.end))
     merged: list[Mention] = []
     for mention in names:
@@ -61,10 +66,51 @@ def resolve(mentions: Iterable[Mention], text: str) -> list[Mention]:
                      key=lambda m: (-m.priority, -(m.end - m.start), m.start, m.etype.value))
     accepted: list[Mention] = []
     for mention in ordered:
-        if mention.end > mention.start \
-                and not any(mention.overlaps(a.start, a.end) for a in accepted):
+        if mention.end <= mention.start:
+            continue
+        covering = [a for a in accepted if mention.overlaps(a.start, a.end)]
+        if not covering:
             accepted.append(mention)
+        elif mention.etype not in _WHOLE_ONLY:
+            accepted.extend(_leftovers(mention, covering, text))
     return sorted(accepted, key=lambda m: m.start)
+
+
+# A date or age means nothing in part: its replacement is computed from the whole value.
+_WHOLE_ONLY = frozenset({E.DATE, E.DOB, E.AGE})
+_MIN_LEFTOVER_DIGITS = 3
+
+
+def _leftovers(mention: Mention, covering: list[Mention], text: str) -> list[Mention]:
+    pieces, cursor = [], mention.start
+    for other in sorted(covering, key=lambda m: m.start):
+        if other.start > cursor:
+            pieces.append((cursor, other.start))
+        cursor = max(cursor, other.end)
+    if cursor < mention.end:
+        pieces.append((cursor, mention.end))
+    found = []
+    for start, end in pieces:
+        while start < end and not _is_word_char(text[start]):
+            start += 1
+        while end > start and not _is_word_char(text[end - 1]):
+            end -= 1
+        value = text[start:end]
+        # digits of an identifier, or a capitalised or Devanagari word of a name or place
+        telling = sum(c.isdigit() for c in value) >= _MIN_LEFTOVER_DIGITS or (
+            mention.etype in _WORDY and any(
+                len(w) >= 3 and (w[0].isupper() or not w.isascii()) for w in value.split()))
+        if telling:
+            found.append(Mention(mention.etype, start, end, value, role=mention.role,
+                                 priority=mention.priority, source=CLIPPED))
+    return found
+
+
+def _is_word_char(char: str) -> bool:
+    return unicodedata.category(char)[0] in "LNM"
+
+
+_WORDY = NAME_TYPES | {E.VILLAGE, E.LOCALITY, E.LANDMARK, E.TEHSIL}
 
 
 class Detector:
@@ -319,7 +365,8 @@ class Detector:
 
         def filler(index: int) -> bool:
             word = words[index].text
-            if self.lexicon.is_known_name(word):
+            # in a name field a word that is also a medicine or condition is a name
+            if self.lexicon.is_known_name(word) or self.lexicon.is_medical(word):
                 return False
             return word.lower() in HONORIFICS_LATIN or self.lexicon.is_stopword(word)
 

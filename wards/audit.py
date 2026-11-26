@@ -20,7 +20,7 @@ from dataclasses import dataclass
 
 from wards.lexicon import Lexicon
 from wards.link import name_tokens
-from wards.model import NAME_TYPES, Document, Mention, Segment
+from wards.model import CLIPPED, NAME_TYPES, Document, Mention, Segment
 from wards.model import EntityType as E
 from wards.model import FieldType as F
 from wards.normalize import id_key, phone_key
@@ -98,6 +98,8 @@ class Auditor:
 
     def remember(self, mention: Mention) -> None:
         value, etype = mention.value.strip(), mention.etype
+        if mention.source == CLIPPED:
+            return
         if etype in NAME_TYPES:
             if mention.priority < _MIN_NAME_PRIORITY:
                 return

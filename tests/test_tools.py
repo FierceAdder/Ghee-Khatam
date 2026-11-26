@@ -77,3 +77,43 @@ def test_policy_sweep_rejects_unknown_settings():
     assert parse(["age_band_years=5,10"]) == [{"age_band_years": 5}, {"age_band_years": 10}]
     with pytest.raises(SystemExit):
         parse(["nonsense=1"])
+
+
+# ------------------------------------------------------------- altered copies
+# Only the levels used for development are exercised; the held-out level is measured once.
+
+
+def altered(destination: Path, level: str, seed: int):
+    from mutate import Mutator
+
+    truth = __import__("json").loads(TRUTH.read_text(encoding="utf-8"))
+    Mutator(truth, seed, level).run(TRUTH.parent.parent / "input", destination)
+    return destination
+
+
+@pytest.mark.parametrize("level", ["easy", "hard"])
+def test_an_altered_copy_has_an_exact_answer_key(tmp_path, level):
+    from mutate import Mutator
+
+    missing, total = Mutator.unmatched(altered(tmp_path / level, level, 7))
+    assert total > 2000 and missing == 0
+
+
+def test_altered_copies_repeat_for_a_seed_and_differ_between_seeds(tmp_path):
+    def contents(root: Path) -> dict:
+        return {p.relative_to(root).as_posix(): p.read_bytes()
+                for p in sorted(root.rglob("*")) if p.is_file()}
+
+    first = contents(altered(tmp_path / "a", "easy", 7))
+    assert contents(altered(tmp_path / "b", "easy", 7)) == first
+    assert contents(altered(tmp_path / "c", "easy", 8)) != first
+
+
+@pytest.mark.parametrize("destination", [str(ROOT), str(ROOT.parent), str(TOOLKIT)])
+def test_altered_copies_never_overwrite_sources(monkeypatch, destination):
+    import mutate
+
+    monkeypatch.setattr(sys, "argv", ["mutate.py", "--out", destination,
+                                      "--toolkit", str(TOOLKIT)])
+    with pytest.raises(SystemExit, match="refusing"):
+        mutate.main()

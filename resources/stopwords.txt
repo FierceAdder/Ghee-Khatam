@@ -70,6 +70,9 @@ treatment plan advised started continue given reviewed
 complains complained presented presents denies reports states stated conscious oriented
 improved education counselled counseled known case seen came resident residing
 
+# words for the person a record is about
+beneficiary client subject member insured
+
 # months and days
 january february march april june july august september october november december jan
 feb mar apr jun jul aug sep sept oct nov dec monday tuesday wednesday thursday friday
@@ -92,6 +95,8 @@ uttar pradesh india yugaantar
 मिला मिली मिले लगा लगी लगे चला चली चले सोया सोई खाया खाई पिया रही रहे आराम हालत स्थिति ठीक सुधार
 
 निवासी निवास रहने रहती रहता वाली
+
+लाभार्थी घरवाले विवरण रहवास सूचना बस्ती
 
 # Devanagari forms, documents and medicine
 नाम उम्र आयु लिंग वर्ष साल महीना महीने सप्ताह हफ़्ते हफ्ते महिला पुरुष स्त्री बालक बालिका

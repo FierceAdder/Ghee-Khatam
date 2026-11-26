@@ -107,6 +107,7 @@ def test_symlinks_are_not_followed(tmp_path, policy):
     ("aadhar_no", F.AADHAAR), ("abha_address", F.ABHA_ADDRESS), ("ABHA No", F.ABHA_NUMBER),
     ("payer_pan", F.PAN), ("pmjay_id", F.INSURANCE_ID), ("ref_doctor", F.DOCTOR_NAME),
     ("LastName", F.LAST_NAME), ("Hospital Name", F.ORG), ("Drug Name", F.ORG),
+    ("D.O.B.", F.DOB), ("d/o/b", F.DOB), ("U.H.I.D.", F.MRN), ("D/O", F.RELATIVE_NAME),
     ("visit_id", F.CODE), ("loinc", F.CODE), ("Remarks", F.TEXT), ("result", F.CLINICAL),
 ])
 def test_header_keywords(label, kind):
@@ -118,7 +119,12 @@ def test_unknown_columns_are_typed_by_their_values(lexicon):
     rows = [["Asha Verma", "9812345670", "4821 7365 9012", "12/04/1977"],
             ["Naveen Bajpai", "9012345678", "7391 4628 5510", "01/05/1980"],
             ["Kusum Devi", "8123456709", "5555 6666 7777", "11/11/1991"]]
-    assert type_columns(header, rows, lexicon) == [F.PATIENT_NAME, F.PHONE, F.AADHAAR, F.DATE]
+    assert type_columns(header, rows, lexicon) == [F.PATIENT_NAME, F.PHONE, F.AADHAAR, F.DOB]
+
+
+def test_dates_under_a_name_header_are_treated_as_dates(lexicon):
+    rows = [["14/03/1961"], ["02/01/1994"], ["19/07/2011"]]
+    assert type_columns(["Guardian"], rows, lexicon) == [F.DOB]
 
 
 def test_values_override_a_misleading_header(lexicon):

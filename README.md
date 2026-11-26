@@ -24,6 +24,7 @@ hackathon/
     ├── config/policy.yaml   privacy rules
     ├── wards/  resources/   the firewall and its word lists
     ├── tests/  tools/       tests and the development loop
+    ├── docs/                project brief (PDF) and the register of changes to test
     └── Dockerfile  docker-compose.yml  Makefile
 ```
 
@@ -66,19 +67,38 @@ output/
   records.jsonl    which record belongs to which pseudonym (null when unsure)
 ```
 
-## Pipeline
+## Architecture
 
 ```
-ingest -> parse -> detect -> learn & sweep -> date order -> link -> redact + privacy
-       -> self-scan & repair -> stage & verify -> publish
+ input folder (read only)
+        |
+   [ ingest ]  type by content, decode; broken or unsupported -> quarantine
+        |
+   [ parse  ]  CSV / TSV / JSON / FHIR / text -> editable segments, fields typed
+        |
+   [ detect ]  normalised view -> IDs, names, places, dates, ages; medical veto
+        |
+   [ learn  ]  identifiers, ID shapes and villages from one file applied to all
+        |
+   [ link   ]  constraint-first clustering -> keyed pseudonym, or null when unsure
+        |
+   [ redact ]  pseudonyms, date shift, age bands, generalise, suppress rare
+        |
+   [ audit  ]  self-scan finished values, repair
+        |
+   [ verify ]  stage, re-read, check structure; fail -> quarantine
+        |
+   [ publish]  atomic renames, report last
+        |
+ output/  sanitized/   records.jsonl   report.json
 ```
 
 | Stage | Module | What it does |
 |---|---|---|
 | Ingest | `wards/ingest.py` | Identifies files by content; UTF-8/16, cp1252; quarantines empty, binary, XML, broken, too deep, symlinked and unknown files |
-| Parse | `wards/documents.py`, `columns.py` | CSV/TSV/JSON/FHIR/text into editable segments; types columns by header keywords *and* values |
+| Parse | `wards/documents.py`, `columns.py` | CSV/TSV/JSON/FHIR/text into editable segments; types columns and JSON keys by label *and*, when the label is unfamiliar, by what the values look like |
 | Normalise | `wards/textview.py`, `normalize.py` | Undoes zero-width, Indic digits, homoglyphs, `\uXXXX`, entities and %-encoding with offsets back to the original; Devanagari transliteration and phonetic name keys |
-| Detect | `wards/detect/` | Identifiers, phones, labelled and contextual names, addresses, ages, dates, encoded payloads |
+| Detect | `wards/detect/` | Identifiers, phones, labelled and contextual names, addresses, ages, dates, encoded payloads; where detections overlap, the uncovered part is still removed |
 | Veto | `wards/veto.py` | Keeps doctors, hospitals, disease eponyms, the ASHA role, doses |
 | Learn | `wards/knowledge.py` | Hospital-number shapes and values learned in one file are removed everywhere, including file names |
 | Link | `wards/link.py` | Strong IDs first, then name plus a unique second clue; refuses merges that conflict; `null` when unsure |
@@ -100,7 +120,7 @@ run.
 | Dates | shifted by a per-patient offset of 1 to 180 days, in the original format |
 | Age | band of 5 to 15 years, chosen once per release from how crowded district-and-sex groups are; `90+` from 90 |
 | Rare diagnosis | a code held by one patient becomes `R69` and its names `[CONDITION]`, in every patient record; documents about no one keep it |
-| Birth date | `[DOB]`; a FHIR `birthDate` is dropped. `dob_mode` can be `shift` or `year`, but both reveal the birth year |
+| Birth date | `[DOB]`; a FHIR `birthDate` is dropped. `dob_mode` can be `shift` or `year`, but both reveal the birth year. Under an unfamiliar header, dates spread over ten years or more are treated as birth dates |
 | Village / tehsil / PIN | district / `[TEHSIL]` / 3-digit prefix |
 | Medicines, doses, vitals, labs, diagnoses, doctors, wards | unchanged |
 
@@ -111,9 +131,31 @@ run.
 - Logs carry only counts, reason codes, exception class names and file-hash prefixes.
 - No temporary files outside the output folder; only redacted bytes are ever written.
   Input is opened read-only. Core dumps are disabled.
+- Raw values and the pseudonym map exist only in process memory, so there is no
+  intermediate file to encrypt and **no encryption at rest is implemented**. Keep input
+  and output on encrypted storage, and disable swap or encrypt it.
 - A failure in one file quarantines that file. A failure in a dataset-wide stage (or
-  `SIGTERM`, or running out of memory) removes everything staged, writes a report marked
-  `"status": "failed"` and exits non-zero.
+  `SIGTERM`, or an out-of-memory error) removes everything staged, writes a report marked
+  `"status": "failed"` and exits non-zero. A forced kill cannot be handled; because
+  `report.json` is published last, the output then never looks complete.
+
+## Measured results
+
+Practice data, `check_dev.py` and our own tools, 26 Nov 2026. Not the official score.
+
+| Measure | Value |
+|---|---|
+| Personal data still visible | 0 of 3,230 pieces (English, Hindi and Hinglish) |
+| Planted canaries found in the output | 0 of 4 |
+| Medical values kept | 99.2 % (the rest are five one-patient diagnoses, removed on purpose) |
+| Linking precision / recall / F0.5 | 1.00 / 1.00 / 1.00 |
+| Intervals between a patient's events | 100 % exact |
+| Records still revealing a birth year | 0 of 111 |
+| Time, peak memory (200 files) | 1.7 s, 67 MB |
+| 2,000 files (6 MB) / 8,000 files (25 MB), copies of the practice data | 18 s, 215 MB / 64 s, 788 MB |
+
+Altered copies, results on wording the first version had not seen, and the attack replay
+are in [SCORES.md](SCORES.md).
 
 ## Development
 
@@ -123,6 +165,11 @@ python3 tools/eval_stage.py --output my_output --show 20
 python3 tools/attacker.py --output my_output [--other release_with_another_secret]
 python3 tools/utility.py --output my_output
 python3 tools/tune.py age_band_max_years=10,15 rare_diagnosis_patients=0,1 --variants
+
+python3 tools/mutate.py --out /tmp/altered --seed 1 --level hard
+python3 main.py --input /tmp/altered/input --output /tmp/altered/release
+python3 ../Secret-Wards-Toolkit/check_dev.py --output /tmp/altered/release \
+    --truth /tmp/altered/truth/truth.json
 ```
 
 `attacker.py` replays the published attacks and `utility.py` estimates the published
@@ -130,18 +177,28 @@ utility formula. Both are our own reading of the documents, not the official eva
 
 `eval_stage.py` counts leaks per identifying token, checks that each true patient's dates
 moved by a single offset, that generalised fields stay truthful, and that every claimed
-pseudonym appears in its record. Tests use invented names and formats only. Record results
-in [SCORES.md](SCORES.md).
+pseudonym appears in its record.
+
+`mutate.py` writes an altered copy of the practice data with an exact answer key: new
+names, renamed headers, keys, labels and folders, other date formats and encodings.
+Levels are `easy`, `hard` and `holdout`.
+
+Tests use invented names; those that need the practice kit are skipped without it. Design
+changes still to be tried are in [docs/CHANGES_TO_TEST.md](docs/CHANGES_TO_TEST.md).
 
 ## Known limitations
 
-- Rules were written while reading the practice data, so practice results overstate how
-  well the firewall will do on unseen formats.
+- Rules were written while reading the practice data, and the altered copies reuse its
+  document layouts. Results on really new formats will be worse than those above: the
+  first run on unfamiliar wording leaked 7.4 % before the fixes it prompted.
 - A name in free text with no label, relation, honorific or similar context, that is in no
   gazetteer and appears nowhere else in the dataset, is missed.
 - All-lower-case names in prose are only found when another record already revealed them.
-- The targeted attack still succeeds about 45 % of the time on practice data: diagnoses
-  shared by two or three patients are kept for research value.
+- Typing fields by their values can over-redact: capitalised phrases in an unfamiliar
+  column beside identifiers may be taken for names, and a column of dates spread over ten
+  years or more for birth dates.
+- The targeted attack still succeeds 45 to 53 % of the time on practice data, depending on
+  the secret: diagnoses shared by two or three patients are kept for research value.
 - The privacy settings were chosen on a practice set of 48 patients. The age-band rule
   adapts to larger data, but that behaviour has not been tested against a real registry.
 - Birth dates are removed so they cannot undo the age bands. This gives up the utility
@@ -152,4 +209,5 @@ in [SCORES.md](SCORES.md).
   detected anywhere is not in its list. It does not search for birth dates.
 - XML, PDF, images, JSON Lines and legacy non-Unicode Hindi encodings are quarantined,
   not cleaned.
-- Memory grows with input size (about 220 MB for a 12 MB input, 800 MB for 47 MB).
+- Memory grows with input size. At the measured rate the 4 GB limit would be reached at
+  roughly five times the 25 MB case; this has not been run.

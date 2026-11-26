@@ -18,7 +18,7 @@ from dataclasses import dataclass, field
 from wards.detect.demographics import normalize_sex, sexes_in_text
 from wards.knowledge import place_key
 from wards.lexicon import HONORIFICS_DEVANAGARI, HONORIFICS_LATIN, Lexicon
-from wards.model import NAME_TYPES, Mention, Record, Role
+from wards.model import CLIPPED, NAME_TYPES, Mention, Record, Role
 from wards.model import EntityType as E
 from wards.model import FieldType as F
 from wards.normalize import digits_only, id_key, phone_key
@@ -86,7 +86,7 @@ def record_names(record: Record, lexicon: Lexicon) -> list[tuple[Name, Mention]]
     found: list[tuple[Name, Mention]] = []
     parts: dict[Role, list[tuple[bool, Mention]]] = defaultdict(list)
     for segment, mention in record.mentions():
-        if mention.etype not in NAME_TYPES:
+        if mention.etype not in NAME_TYPES or mention.source == CLIPPED:
             continue
         if segment.field in (F.FIRST_NAME, F.LAST_NAME) and mention.source == "field":
             parts[mention.role].append((segment.field is F.LAST_NAME, mention))
@@ -218,7 +218,7 @@ class Linker:
                 unknown.append(name)
         for _, mention in record.mentions():
             etype = mention.etype
-            if etype in NAME_TYPES:
+            if etype in NAME_TYPES or mention.source == CLIPPED:
                 continue
             if etype in (E.DATE, E.DOB):
                 value = mention.data.resolve(order, reference_year) if mention.data else None

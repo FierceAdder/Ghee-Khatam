@@ -13,7 +13,7 @@ from collections import Counter, defaultdict
 from collections.abc import Iterable
 
 from wards.lexicon import District, Lexicon
-from wards.model import Channel, Document, Mention, Record, Segment
+from wards.model import CLIPPED, Channel, Document, Mention, Record, Segment
 from wards.model import EntityType as E
 from wards.model import FieldType as F
 from wards.normalize import digits_only, id_key, is_devanagari, phone_key, skeleton, transliterate
@@ -80,6 +80,8 @@ class Knowledge:
         self._compile()
 
     def _learn_mention(self, mention: Mention) -> None:
+        if mention.source == CLIPPED:
+            return
         value = mention.value.strip()
         if mention.etype in _SHAPED_TYPES:
             key = id_key(value)

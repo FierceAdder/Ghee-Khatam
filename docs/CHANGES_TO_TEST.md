@@ -23,7 +23,7 @@ score would notice.
 | T-02 | Self-scan of the finished files using the scorer's normalisation (NFKC, homoglyphs, zero-width, Indic digits, accents, base64, hex, escapes) | Plant known identifiers into writer paths; measure false positives on clean documents | Every plant is caught; clean documents stay byte-identical | kept: all 18 planted disguises found; clean documents unchanged; 0 repairs needed on practice data |
 | T-03 | Repair a self-scan hit instead of dropping the file | Count files repaired and quarantined | Fewer lost files than quarantine-only, no new leaks | kept: a forgotten column is repaired and the file kept |
 | T-04 | Structural check of each output (CSV shape, JSON key paths and types, text line count, FHIR references) | Compare input and output structure | Only errors we introduced cause quarantine | kept: injected writer faults quarantine only the affected file; 0 false quarantines on practice data and a 10x copy |
-| T-05 | Process hardening: no core dumps, PII-free failure report, memory reserve | Force `MemoryError` and `SIGTERM` | Staging removed, non-zero exit, no values printed | kept: forced MemoryError and SIGTERM exceptions release nothing. A real signal was not sent |
+| T-05 | Process hardening: no core dumps, PII-free failure report, memory reserve | Force `MemoryError` and `SIGTERM` | Staging removed, non-zero exit, no values printed | kept: forced MemoryError and SIGTERM exceptions release nothing. A real `SIGTERM` was later sent at four points of a 2,000-file run: exit 143, a failed report and no records each time |
 | T-06 | `PR_SET_DUMPABLE=0` | Run under a memory watchdog that reads `/proc` | The watchdog still works. Low security gain, unknown breakage risk | deferred |
 | T-07 | Restrictive `umask` on outputs | Read outputs as a different user | The scorer can still read them. Risky if it runs as another user | rejected for now |
 
@@ -50,16 +50,18 @@ score would notice.
 
 | ID | Change to test | How to measure | Keep if | Status |
 |---|---|---|---|---|
-| T-30 | Altered copies of the practice data with a matching answer key: renamed headers and keys, new names, new date and ID formats, new labels, other encodings, moved files | `check_dev.py` on each copy | Used as the acceptance test for detection work | planned (8) |
-| T-31 | Medical words allowed inside a name when the context names a person ("Patient Parkinson Kumar") | Unit cases and altered copies | Recall rises, disease eponyms still preserved | planned (8) |
-| T-32 | Clip, rather than drop, a detection that partly overlaps a stronger one | Unit cases, leak counts | No identifier fragment survives an overlap | planned (8) |
+| T-30 | Altered copies of the practice data with a matching answer key: renamed headers and keys, new names, new date and ID formats, new labels, other encodings, moved files | `check_dev.py` on each copy | Used as the acceptance test for detection work | kept: easy, hard and held-out levels; the first hard run leaked 240 of 3230 pieces and drove the Phase 8 fixes (SCORES.md) |
+| T-31 | Medical words allowed inside a name when the context names a person ("Patient Parkinson Kumar") | Unit cases and altered copies | Recall rises, disease eponyms still preserved | kept on unit cases; the practice data has no such name, so no recall change was measured there. Medical values kept unchanged |
+| T-32 | Clip, rather than drop, a detection that partly overlaps a stronger one | Unit cases, leak counts | No identifier fragment survives an overlap | kept on unit cases. Its separate effect on leak counts was not measured |
 | T-33 | Preserve a span only on grammar evidence, not word-list membership alone | Meaning-trap cases | Precision holds with higher recall | open |
-| T-34 | Round every edit outward to whole characters and combining marks | Devanagari cases | No broken matras | planned (8) |
-| T-35 | More label-free person cues (relation grammar, "naam", chat senders) | Run with all name lists removed on altered copies | Leaks fall | planned (8) |
+| T-34 | Round every edit outward to whole characters and combining marks | Devanagari cases | No broken matras | kept on unit cases. Its separate effect on leak counts was not measured |
+| T-35 | More label-free person cues (relation grammar, "naam", chat senders) | Run with all name lists removed on altered copies | Leaks fall | kept: added spouse, child of, ward of, care giver and name-before-age cues. With all name lists removed, no piece leaks on practice data or the first hard copy |
 | T-36 | Small averaged-perceptron name scorer, additive only | Recall and precision on altered copies, with it on and off | Clear recall gain with no utility loss | deferred |
 | T-37 | Remove name-list words that coincide with practice canary words | Leak counts with and without | Results unchanged | open |
 | T-38 | Detect names written in lower case in prose | Altered chat notes | Gain without false positives | open |
 | T-39 | Birth dates with no label anywhere in a patient's records | Altered notes | Detected without breaking visit dates | open |
+| T-3A | Type unfamiliar columns and JSON keys by what their values look like (identifiers, PIN, village, name, doctor, birth date) | Altered copies; medical values kept on practice data | Leaks and linking improve with no utility loss | kept, measured together with T-35: hard copy leaks 240 to 0 and linking recall 0.50 to 0.99; practice unchanged |
+| T-3B | Test value typing against columns it should leave alone (long date histories, capitalised category phrases) | Hand-made tables from other record systems | No clinical column is redacted | open |
 
 ## Linking (proposed changes 2 and 3)
 
@@ -94,5 +96,5 @@ The constraint-first union-find already exists. These refine it.
 | Q-01 | How much clinical utility does each rare-code rollup cost? | Sets how far T-12 can go | answered: about 0.01 of utility for the five one-patient codes |
 | Q-02 | How large are the hidden datasets compared with the roughly 240 MB where memory would run out? | Decides how urgent T-50 to T-52 are | open (ask organisers) |
 | Q-03 | Does the scorer inspect a leftover staging folder, and how does it treat a non-zero exit? | Decides failure behaviour | open (ask organisers) |
-| Q-04 | How much of the drop on unseen formats can label-free cues recover? | Ranks detection work | planned (8) |
+| Q-04 | How much of the drop on unseen formats can label-free cues recover? | Ranks detection work | partly answered: with name lists removed nothing leaks on practice data or the hard copy. The effect of each cue on its own was not measured |
 | Q-05 | How accurate is our attack replay compared with the real attacker? | Limits how far to trust privacy tuning | partly answered: matches on A4 and A5 for raw input; A2/A3 reads low |

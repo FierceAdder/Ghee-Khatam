@@ -15,6 +15,10 @@ from typing import Any
 
 from wards.textview import TextView
 
+# Source of a mention that is only the uncovered remainder of an overlapped detection. It is
+# redacted like any other, but its value is a fragment: never learn from it or link by it.
+CLIPPED = "clipped"
+
 
 class EntityType(str, Enum):
     PATIENT_NAME = "PATIENT_NAME"

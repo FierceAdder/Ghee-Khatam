@@ -11,11 +11,12 @@ import binascii
 import csv
 import io
 import re
+from collections import defaultdict
 from dataclasses import dataclass
 
 from wards import jsonio
-from wards.columns import (classify_fhir, classify_json_key, classify_label, is_schema_label,
-                           type_columns)
+from wards.columns import (classify_fhir, classify_json_key, classify_label, context_of,
+                           infer_from_values, is_schema_label, type_columns)
 from wards.errors import QuarantineError
 from wards.ingest import InputFile
 from wards.lexicon import Lexicon
@@ -118,16 +119,62 @@ def _parse_json(doc: Document, item: InputFile, lexicon: Lexicon) -> None:
     if isinstance(tree, dict) and "resourceType" in tree:
         doc.kind = DocKind.FHIR
         record_paths: set[tuple] = {()}
+        hints: dict[tuple[str, ...], F] = {}
     else:
-        record_paths = _find_records(tree)
-    doc.payload = _Builder(doc, record_paths, lexicon).build(tree, (), (), None, "", {})
+        hints = _type_unknown_keys(tree, lexicon)
+        record_paths = _find_records(tree, hints)
+    doc.payload = _Builder(doc, record_paths, lexicon, hints).build(tree, (), (), None, "", {})
+
+
+# What a key that the label vocabulary does not know may turn out to hold.
+_OPEN_FIELDS = (F.TEXT, F.NAME)
+_MAX_SAMPLE = 200
+
+
+def _type_unknown_keys(tree: object, lexicon: Lexicon) -> dict[tuple[str, ...], F]:
+    """Type values under unfamiliar keys by what the same key holds across the file."""
+    values: dict[tuple[str, ...], list[str]] = defaultdict(list)
+
+    def collect(node: object, keys: tuple[str, ...]) -> None:
+        if isinstance(node, dict):
+            for key, child in node.items():
+                collect(child, keys + (key,))
+        elif isinstance(node, list):
+            for child in node:
+                collect(child, keys)
+        elif keys and isinstance(node, (str, jsonio.JsonNumber)):
+            if len(values[keys]) < _MAX_SAMPLE:
+                values[keys].append(node if isinstance(node, str) else node.raw)
+
+    collect(tree, ())
+    known = {keys: classify_json_key(keys) for keys in values}
+    unknown = [keys for keys in values
+               if known[keys] in _OPEN_FIELDS and classify_label(keys[-1]) is None]
+    hints: dict[tuple[str, ...], F] = {}
+    # Two passes: identifiers found in the first count as context for names in the second.
+    for _ in range(2):
+        context = context_of(hints.get(keys, kind) for keys, kind in known.items())
+        for keys in unknown:
+            kind = infer_from_values(values[keys], lexicon, context)
+            if kind is not None:
+                hints[keys] = F.NAME if kind is F.PERSON_NAME else kind
+    # As in a table: if no key claims the patient, the first unclaimed name column does.
+    claimed = {hints.get(keys, kind) for keys, kind in known.items()}
+    if not claimed & {F.PATIENT_NAME, F.FIRST_NAME, F.LAST_NAME} \
+            and context_of(claimed).identifiers:
+        for keys in unknown:
+            if hints.get(keys) is F.NAME:
+                hints[keys] = F.PATIENT_NAME
+                break
+    return hints
 
 
 def _escape_pointer(part: object) -> str:
     return str(part).replace("~", "~0").replace("/", "~1")
 
 
-def _has_identity(node: object, keys: tuple[str, ...] = (), depth: int = 0) -> bool:
+def _has_identity(node: object, hints: dict, keys: tuple[str, ...] = (),
+                  depth: int = 0) -> bool:
     if depth > 5:
         return False
     if isinstance(node, dict):
@@ -136,19 +183,20 @@ def _has_identity(node: object, keys: tuple[str, ...] = (), depth: int = 0) -> b
             if isinstance(value, (dict, list)):
                 if classify_label(key) is F.PATIENT_NAME and isinstance(value, dict):
                     return True
-                if _has_identity(value, path, depth + 1):
+                if _has_identity(value, hints, path, depth + 1):
                     return True
-            elif value not in (None, "") and classify_json_key(path) in _IDENTITY_TYPES:
+            elif value not in (None, "") \
+                    and hints.get(path, classify_json_key(path)) in _IDENTITY_TYPES:
                 return True
     elif isinstance(node, list):
-        return any(_has_identity(child, keys, depth + 1) for child in node[:20])
+        return any(_has_identity(child, hints, keys, depth + 1) for child in node[:20])
     return False
 
 
-def _find_records(tree: object) -> set[tuple]:
+def _find_records(tree: object, hints: dict) -> set[tuple]:
     """Paths of the JSON nodes that each describe one record. ``()`` means whole file."""
     if isinstance(tree, list):
-        if any(isinstance(x, dict) and _has_identity(x) for x in tree):
+        if any(isinstance(x, dict) and _has_identity(x, hints) for x in tree):
             return {(i,) for i, x in enumerate(tree) if isinstance(x, dict)}
         return {()}
     if not isinstance(tree, dict):
@@ -160,17 +208,21 @@ def _find_records(tree: object) -> set[tuple]:
            if not (isinstance(value, list) and value and isinstance(value[0], dict))}
     for key, value in own.items():
         if isinstance(value, dict):
-            if classify_label(key) is F.PATIENT_NAME and _has_identity(value, (key,)):
+            if classify_label(key) is F.PATIENT_NAME and _has_identity(value, hints, (key,)):
                 return {()}
-        elif value not in (None, "") and classify_json_key((key,)) in _IDENTITY_TYPES:
+        elif value not in (None, "") \
+                and hints.get((key,), classify_json_key((key,))) in _IDENTITY_TYPES:
             return {()}
 
     found: set[tuple] = set()
 
     def search(node: dict, path: tuple, depth: int) -> None:
+        keys = tuple(p for p in path if isinstance(p, str))
         for key, value in node.items():
             if isinstance(value, list) and any(isinstance(x, dict) for x in value):
-                if any(isinstance(x, dict) and _has_identity(x) for x in value):
+                # hints are keyed by the full key path from the top of the file
+                if any(isinstance(x, dict) and _has_identity(x, hints, keys + (key,))
+                       for x in value):
                     found.update(path + (key, i) for i, x in enumerate(value)
                                  if isinstance(x, dict))
             elif isinstance(value, dict) and depth < 3:
@@ -181,7 +233,9 @@ def _find_records(tree: object) -> set[tuple]:
 
 
 class _Builder:
-    def __init__(self, doc: Document, record_paths: set[tuple], lexicon: Lexicon) -> None:
+    def __init__(self, doc: Document, record_paths: set[tuple], lexicon: Lexicon,
+                 hints: dict[tuple[str, ...], F]) -> None:
+        self.hints = hints
         self.lexicon = lexicon
         self.doc = doc
         self.record_paths = record_paths
@@ -223,7 +277,8 @@ class _Builder:
     def _field(self, keys: tuple[str, ...], resource: str, siblings: dict) -> F:
         if self.doc.kind is DocKind.FHIR:
             return classify_fhir(keys, resource, siblings)
-        return classify_json_key(keys)
+        kind = classify_json_key(keys)
+        return self.hints.get(keys, kind) if kind in _OPEN_FIELDS else kind
 
     def _string(self, value: str, keys: tuple[str, ...], resource: str,
                 siblings: dict) -> Segment:

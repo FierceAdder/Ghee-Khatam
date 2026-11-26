@@ -8,21 +8,30 @@ checked too: a column with an unfamiliar header is typed by what its cells look 
 from __future__ import annotations
 
 import re
-from collections.abc import Sequence
+import unicodedata
+from collections.abc import Iterable, Sequence
+from dataclasses import dataclass
 from functools import lru_cache
 
 from wards.lexicon import Lexicon
 from wards.model import FieldType as F
 from wards.textview import TextView
 
-_CAMEL = re.compile(r"(?<=[a-z0-9])(?=[A-Z])|(?<=[A-Z])(?=[A-Z][a-z])")
+# "PatientName", "PatientID" and "Name1" are split into their words.
+_CAMEL = re.compile(r"(?<=[a-z0-9])(?=[A-Z])|(?<=[A-Z])(?=[A-Z][a-z])|(?<=[A-Za-z]{3})(?=\d)")
 _SEPARATORS = re.compile(r"[^0-9a-z\u0900-\u0963\u0971-\u097f]+")
+
+
+# Three or more single letters written with dots or strokes: "D.O.B.", "U.H.I.D."
+_INITIALS = re.compile(r"(?<![A-Za-z])(?:[A-Za-z][./] ?){2,}[A-Za-z](?![A-Za-z])\.?")
 
 
 @lru_cache(maxsize=65_536)
 def normalize_label(label: str) -> str:
     """``"Pita/Pati ka Naam"`` -> ``" pita pati ka naam "`` (padded for whole-word tests)."""
     text = TextView.of(label).text
+    # "D.O.B." is one word, not the relation "D/O" followed by a "B"
+    text = _INITIALS.sub(lambda m: re.sub(r"[./ ]", "", m.group(0)), text)
     text = _CAMEL.sub(" ", text)
     text = text.replace("'s", "").replace("’s", "").lower()
     return f" {_SEPARATORS.sub(' ', text).strip()} "
@@ -148,15 +157,50 @@ _SHAPES: tuple[tuple[F, re.Pattern[str]], ...] = (
     (F.ABHA_NUMBER, re.compile(r"\d{2}-\d{4}-\d{4}-\d{4}$")),
     (F.AADHAAR, re.compile(r"\d{4}([ -]?)\d{4}\1\d{4}$|[Xx*]{4}[ -]?[Xx*]{4}[ -]?\d{4}$")),
     (F.PHONE, re.compile(r"(?:\+?91[ -]?|0)?[6-9]\d{2,4}[ -]?\d{2,3}[ -]?\d{3,5}$")),
-    (F.DATE, re.compile(r"\d{1,2}[-/.]\d{1,2}[-/.](?:19|20)\d\d$|(?:19|20)\d\d-\d\d-\d\d")),
+    (F.DATE, re.compile(r"\d{1,2}[-/.]\d{1,2}[-/.](?:19|20)\d\d$|(?:19|20)\d\d-\d\d-\d\d"
+                        r"|\d{1,2}[-/. ][A-Za-z]{3,9}[-/. ,]{1,2}(?:19|20)\d\d$")),
 )
+_MRN_SHAPE = re.compile(r"[A-Z]{2,6}[\-/ _]?\d{0,4}[\-/ _]?\d{5,}$")
 _ADDRESS_MARKER = re.compile(
     r"(?i)\b(h\.?\s?no|house|makan|mohalla|tehsil|distt?\.|vill\.|gram|near|ward)\b"
     r"|मकान|मोहल्ला|तहसील|जिला|ग्राम")
-_NAME_TOKEN = re.compile(r"[A-Za-z]+\.?|[\u0900-\u0963\u0971-\u097f]+")
+_NAME_TOKEN = re.compile(r"[A-Za-z]+(?:['’][A-Za-z]+)?\.?|[\u0900-\u0963\u0971-\u097f]+")
+_NAME_ONLY = re.compile(r"^(?:[A-Za-z\u0900-\u0963\u0971-\u097f'’.\- ]+)$")
+# How Indian village names usually end (public knowledge, not taken from any dataset).
+VILLAGE_ENDING = re.compile(unicodedata.normalize(
+    "NFKC", r"(?:pur|pura|purwa|ganj|garh|khera|kheda|dih|mau|gaon|wala|abad|kalan|khurd|nagar|"
+            r"पुर|पुरा|पुरवा|गंज|गढ़|खेड़ा|डीह|मऊ|गांव|कलां|खुर्द|नगर)$"), re.IGNORECASE)
+_PIN_CELL = re.compile(r"[1-9]\d{2} ?\d{3}$")
+_DOCTOR_TITLE = re.compile(r"(?i)(?:dr\.?(?![a-z])|prof\.?(?![a-z])|डॉ|डा\.)")
+_YEAR = re.compile(r"(?<!\d)(?:19|20)\d\d(?!\d)")
+_BIRTH_SPREAD_YEARS = 10
 
 
-def _looks_like_name(value: str, lexicon: Lexicon) -> bool:
+def _spans_lifetimes(cells: Sequence[str]) -> bool:
+    years = [int(m.group(0)) for c in cells if (m := _YEAR.search(c))]
+    return len(years) >= 2 and max(years) - min(years) >= _BIRTH_SPREAD_YEARS
+
+
+@dataclass(frozen=True)
+class Context:
+    """What else a table or document holds, which decides how to read an unknown field."""
+
+    identifiers: bool = False      # hospital numbers, phones, health IDs, birth dates
+    places: bool = False           # districts, villages or addresses
+
+
+_IDENTIFYING = frozenset({F.MRN, F.PHONE, F.AADHAAR, F.ABHA_NUMBER, F.PAN, F.EMAIL,
+                          F.INSURANCE_ID, F.DOB, F.AGE, F.AGE_SEX})
+_PLACING = frozenset({F.DISTRICT, F.VILLAGE, F.ADDRESS, F.TEHSIL, F.STATE})
+
+
+def context_of(types: Iterable[F | None]) -> Context:
+    kinds = set(types)
+    return Context(identifiers=bool(kinds & _IDENTIFYING), places=bool(kinds & _PLACING))
+
+
+def looks_like_name(value: str, lexicon: Lexicon) -> bool:
+    """A value holding a word that is in the name lists, and nothing that rules one out."""
     if any(ch.isdigit() for ch in value):
         return False
     tokens = _NAME_TOKEN.findall(value)
@@ -165,17 +209,55 @@ def _looks_like_name(value: str, lexicon: Lexicon) -> bool:
     return any(lexicon.is_known_name(t) for t in tokens)
 
 
-def infer_from_values(values: Sequence[str], lexicon: Lexicon) -> F | None:
+def shaped_like_name(value: str, lexicon: Lexicon) -> bool:
+    """Two to five capitalised words that are no medicine, place or ordinary word."""
+    if not _NAME_ONLY.match(value) or lexicon.district(value):
+        return False
+    tokens = _NAME_TOKEN.findall(value)
+    if not 2 <= len(tokens) <= 5:
+        return False
+    return all(not lexicon.is_stopword(t) and (not t.isascii() or t[0].isupper())
+               for t in tokens) and not _FACILITY.search(value)
+
+
+_FACILITY = re.compile(r"(?i)\b(hospital|clinic|sadan|diagnostics?|pathology|labs?|institute|"
+                       r"centre|center|trust|college|pharmacy)\b|अस्पताल|चिकित्सालय")
+
+
+def infer_from_values(values: Sequence[str], lexicon: Lexicon,
+                      context: Context = Context()) -> F | None:
     cells = [TextView.of(v).text.strip() for v in values if v and v.strip()][:200]
-    if len(cells) < 2:
+    if len(cells) == 1:
+        return _infer_single(cells[0], lexicon, context)
+    if not cells:
         return None
     threshold = 0.6 * len(cells)
+
+    def share(test) -> int:
+        return sum(bool(test(c)) for c in cells)
+
     for kind, pattern in _SHAPES:
-        if sum(bool(pattern.match(c)) for c in cells) >= threshold:
+        if share(pattern.match) >= threshold:
+            if kind is F.DATE and _spans_lifetimes(cells):
+                return F.DOB     # event dates cluster; birth dates are decades apart
             return kind
-    if sum(len(_ADDRESS_MARKER.findall(c)) >= 2 for c in cells) >= threshold:
+    if share(_DOCTOR_TITLE.match) >= threshold:
+        return F.DOCTOR_NAME
+    if share(_MRN_SHAPE.match) >= 0.8 * len(cells):
+        return F.MRN
+    if share(lambda c: len(_ADDRESS_MARKER.findall(c)) >= 2) >= threshold:
         return F.ADDRESS
-    if sum(_looks_like_name(c, lexicon) for c in cells) >= threshold:
+    if context.places and share(_PIN_CELL.match) >= 0.8 * len(cells):
+        return F.PIN
+    if share(lambda c: _NAME_ONLY.match(c) and len(c.split()) <= 3
+             and VILLAGE_ENDING.search(c) and not lexicon.district(c)) >= 0.5 * len(cells):
+        return F.VILLAGE
+    if share(lambda c: looks_like_name(c, lexicon)) >= threshold:
+        return F.PERSON_NAME
+    # Names absent from every list: trusted only beside identifiers, and only when the
+    # values vary as names do (a category column repeats itself).
+    if context.identifiers and share(lambda c: shaped_like_name(c, lexicon)) \
+            >= 0.7 * len(cells) and len(set(cells)) >= max(2, len(cells) // 5):
         return F.PERSON_NAME
     return None
 
@@ -183,20 +265,60 @@ def infer_from_values(values: Sequence[str], lexicon: Lexicon) -> F | None:
 _PATTERNED = frozenset({F.EMAIL, F.PAN, F.ABHA_NUMBER, F.AADHAAR, F.PHONE})
 
 
+def _infer_single(cell: str, lexicon: Lexicon, context: Context) -> F | None:
+    """One value is evidence enough only for a shape that cannot be much else."""
+    for kind, pattern in _SHAPES:
+        if kind in _PATTERNED and pattern.match(cell):
+            return kind
+    if _MRN_SHAPE.match(cell):
+        return F.MRN
+    if context.places and _NAME_ONLY.match(cell) and len(cell.split()) <= 2 \
+            and VILLAGE_ENDING.search(cell) and not lexicon.district(cell):
+        return F.VILLAGE
+    return None
+
+
+def _split_name_columns(types: list[F], columns: Sequence[Sequence[str]],
+                        lexicon: Lexicon) -> None:
+    """Two one-word name columns in the same script are one name in two parts."""
+    names = [i for i, kind in enumerate(types) if kind is F.PATIENT_NAME]
+    if len(names) != 2:
+        return
+    surname_share, scripts = [], set()
+    for index in names:
+        cells = [v.strip() for v in columns[index] if v.strip()]
+        if len(cells) < 2 or sum(len(c.split()) == 1 for c in cells) < 0.7 * len(cells):
+            return
+        scripts.add(sum(c.isascii() for c in cells) > len(cells) / 2)
+        surname_share.append(sum(lexicon.is_surname(c) for c in cells) / len(cells))
+    if len(scripts) != 1:
+        return           # the same name written twice, not two parts of it
+    # the column holding more known surnames is the family name; otherwise the second
+    last = names[0] if surname_share[0] > surname_share[1] else names[1]
+    for index in names:
+        types[index] = F.LAST_NAME if index == last else F.FIRST_NAME
+
+
 def type_columns(header: Sequence[str], rows: Sequence[Sequence[str]],
                  lexicon: Lexicon) -> list[F]:
+    suggestions = [classify_label(label) for label in header]
+    columns = [[row[i] for row in rows if i < len(row)] for i in range(len(header))]
+    # first pass: what kinds of thing are in the table at all
+    first = [s or infer_from_values(v, lexicon) for s, v in zip(suggestions, columns,
+                                                                strict=True)]
+    context = context_of(first)
     types: list[F] = []
-    for index, label in enumerate(header):
-        suggested = classify_label(label)
-        values = [row[index] for row in rows if index < len(row)]
-        inferred = infer_from_values(values, lexicon)
+    for suggested, values in zip(suggestions, columns, strict=True):
+        inferred = infer_from_values(values, lexicon, context)
         if suggested is None or suggested is F.CODE and inferred in _PATTERNED:
             kind = inferred or suggested or F.TEXT
-        elif suggested in (F.PATIENT_NAME, F.RELATIVE_NAME) and inferred in _PATTERNED:
+        elif suggested in (F.PATIENT_NAME, F.RELATIVE_NAME) \
+                and inferred in _PATTERNED | {F.DATE, F.DOB}:
             kind = inferred          # shifted columns: trust the values
         else:
             kind = suggested
         types.append(kind)
+    _split_name_columns(types, columns, lexicon)
     # An unnamed person column is the patient only if no column already claims that role.
     has_patient = any(t in (F.PATIENT_NAME, F.FIRST_NAME, F.LAST_NAME) for t in types)
     if not has_patient:
@@ -270,6 +392,9 @@ def classify_json_key(path: Sequence[str]) -> F:
             return role
     if kind is F.CODE and key in ("relation", "relationship"):
         return F.CODE
+    if kind is None and _container_role(ancestors) in (F.PATIENT_NAME, F.PERSON_NAME,
+                                                       F.RELATIVE_NAME):
+        return F.NAME        # used only if the value reads like a person
     return kind or F.TEXT
 
 
