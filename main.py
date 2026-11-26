@@ -21,7 +21,7 @@ sys.dont_write_bytecode = True      # the repository may be mounted read-only
 from wards.errors import ConfigError  # noqa: E402
 from wards.pipeline import Pipeline  # noqa: E402
 from wards.policy import load_policy  # noqa: E402
-from wards.security import SafeLog, Secret, harden_process  # noqa: E402
+from wards.security import SafeLog, Secret, Terminated, harden_process  # noqa: E402
 
 
 class _QuietParser(argparse.ArgumentParser):
@@ -51,6 +51,9 @@ def main(argv: list[str] | None = None) -> int:
     except KeyboardInterrupt:
         errors.problem("interrupted")
         return 130
+    except Terminated:
+        errors.problem("terminated")
+        return 143
     except Exception as error:  # noqa: BLE001 - never let a traceback print values
         errors.problem("run_failed", error=error)
         return 1

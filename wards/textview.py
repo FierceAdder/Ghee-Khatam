@@ -101,12 +101,26 @@ def _fold(piece: str) -> str:
         if char.isascii():
             out.append(char)
             continue
+        if "\u0300" <= char <= "\u036f":
+            continue                       # a combining accent typed after its letter
         digit = unicodedata.decimal(char, None)
         if digit is not None:
             out.append(str(digit))
             continue
-        out.append(unicodedata.normalize("NFKC", char).translate(_HOMOGLYPHS))
+        folded = unicodedata.normalize("NFKC", char).translate(_HOMOGLYPHS)
+        out.append("".join(_unaccent(c) for c in folded))
     return "".join(out)
+
+
+def _unaccent(char: str) -> str:
+    """The plain Latin letter under an accented one; every other character unchanged."""
+    if char.isascii():
+        return char
+    base = unicodedata.normalize("NFD", char)
+    if len(base) > 1 and base[0].isascii() and base[0].isalpha() \
+            and all("\u0300" <= mark <= "\u036f" for mark in base[1:]):
+        return base[0]
+    return char
 
 
 def _decode(match: re.Match[str]) -> list[tuple[str, int, int]] | None:

@@ -7,6 +7,7 @@ are not the official score, and no attacker has been run yet (Phase 6).
 |---|---|---:|---:|---:|---:|---:|---:|
 | 2026-11-26 | Phases 1-5, birth dates shifted | 0 / 3230 | 0 / 4 | 4855 / 4855 | 1.00 / 1.00 | 0 | about 1 s |
 | 2026-11-26 | Phases 1-5, birth dates removed | 0 / 3230 | 0 / 4 | 4855 / 4855 | 1.00 / 1.00 | 0 | about 1 s |
+| 2026-11-26 | Phase 6, release gate | 0 / 3230 | 0 / 4 | 4855 / 4855 | 1.00 / 1.00 | 0 | 1.4 s |
 
 Also measured on 2026-11-26:
 

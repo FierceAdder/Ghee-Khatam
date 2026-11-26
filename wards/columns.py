@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import re
 from collections.abc import Sequence
+from functools import lru_cache
 
 from wards.lexicon import Lexicon
 from wards.model import FieldType as F
@@ -18,6 +19,7 @@ _CAMEL = re.compile(r"(?<=[a-z0-9])(?=[A-Z])|(?<=[A-Z])(?=[A-Z][a-z])")
 _SEPARATORS = re.compile(r"[^0-9a-zऀ-ॣॱ-ॿ]+")
 
 
+@lru_cache(maxsize=65_536)
 def normalize_label(label: str) -> str:
     """``"Pita/Pati ka Naam"`` -> ``" pita pati ka naam "`` (padded for whole-word tests)."""
     text = TextView.of(label).text
@@ -105,6 +107,7 @@ _THING_NAME = _phrases("hospital|facility|lab|laboratory|drug|medicine|test|pane
                        "organisation|organization|scheme|bank|branch|village|district")
 
 
+@lru_cache(maxsize=65_536)
 def classify_label(label: str) -> F | None:
     """Field type suggested by a header or key, or ``None`` when it says nothing."""
     text = normalize_label(label)
@@ -124,6 +127,7 @@ def classify_label(label: str) -> F | None:
 _LABEL_WORDS = frozenset(word for _, phrases in _RULES for p in phrases for word in p.split())
 
 
+@lru_cache(maxsize=65_536)
 def is_schema_label(label: str, lexicon: Lexicon) -> bool:
     """A header or key that merely names a field (``Umar``, ``Pita/Pati ka Naam``).
 

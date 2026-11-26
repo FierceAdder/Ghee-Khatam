@@ -14,7 +14,9 @@ import hashlib
 import hmac
 import os
 import re
+import signal
 import sys
+import threading
 import warnings
 from collections.abc import Mapping
 from typing import TextIO
@@ -100,11 +102,32 @@ def _checked_token(value: str) -> str:
     return value if _SAFE_TOKEN.match(value) else "redacted"
 
 
+class Terminated(BaseException):
+    """The run was asked to stop (SIGTERM); staged files must still be removed."""
+
+
 def harden_process() -> None:
-    """Stop the interpreter from printing values on its own (warnings, tracebacks)."""
+    """Keep values off the console and out of crash dumps, and stop cleanly."""
     warnings.simplefilter("ignore")
 
     def _hook(exc_type, _value, _traceback) -> None:
         sys.stderr.write(f"fatal error={exc_type.__name__}\n")
 
     sys.excepthook = _hook
+    _disable_core_dumps()
+    if threading.current_thread() is threading.main_thread():
+        signal.signal(signal.SIGTERM, _terminate)
+
+
+def _terminate(_signum, _frame) -> None:
+    raise Terminated()
+
+
+def _disable_core_dumps() -> None:
+    """A core dump would write every record held in memory to disk."""
+    try:
+        import resource
+
+        resource.setrlimit(resource.RLIMIT_CORE, (0, 0))
+    except (ImportError, OSError, ValueError):  # not available on this platform
+        pass

@@ -97,14 +97,18 @@ def write_records(path: Path, records: Sequence[dict]) -> None:
     write_text_file(path, lines)
 
 
-def write_report(path: Path, files: Sequence[dict], counts: dict, entities: dict,
-                 seconds: float, peak_rss_mb: float) -> None:
-    report = {
+def build_report(files: Sequence[dict], counts: dict, entities: dict, seconds: float,
+                 peak_rss_mb: float, status: str = "complete") -> dict:
+    return {
         "schema": REPORT_SCHEMA,
+        "status": status,
         "files": list(files),
         "counts": counts,
         "entities": dict(sorted(entities.items())),
         "timing": {"seconds": round(seconds, 2)},
         "resources": {"peak_rss_mb": peak_rss_mb},
     }
+
+
+def write_report(path: Path, report: dict) -> None:
     write_text_file(path, json.dumps(report, indent=2) + "\n")

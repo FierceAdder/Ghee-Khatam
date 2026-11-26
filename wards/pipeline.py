@@ -1,10 +1,11 @@
 """Run the stages in order, isolating failures to the file that caused them.
 
-    ingest -> parse -> detect -> learn & sweep -> date order -> link -> redact -> write
+    ingest -> parse -> detect -> learn & sweep -> date order -> link -> redact
+           -> self-scan & repair -> stage & verify -> publish
 
 A problem in one file quarantines that file only. A problem in a dataset-wide stage
-(linking) stops the run with a non-zero exit code: a partial release must never look
-complete.
+removes everything staged, writes a report marked "failed" and exits non-zero: a partial
+release must never look complete.
 """
 
 from __future__ import annotations
@@ -16,23 +17,29 @@ from collections import Counter, defaultdict
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from wards import dates, documents, ingest, write
+from wards import dates, documents, ingest, validate, write
+from wards.audit import Auditor
 from wards.detect import Detector, resolve
 from wards.errors import ConfigError, QuarantineError
 from wards.knowledge import Knowledge, id_shape
 from wards.lexicon import Lexicon
 from wards.link import Linker, record_names
-from wards.model import Channel, Document, Segment
+from wards.model import Channel, DocKind, Document, Segment
 from wards.model import EntityType as E
 from wards.model import FieldType as F
 from wards.policy import Policy
 from wards.privacy import Privacy
 from wards.redact import PatientContext, Redactor
+from wards.release import Release
 from wards.security import SafeLog, Secret
 from wards.sweep import NameBag, NameSweeper
 
 DEFAULT_REFERENCE_YEAR = 2025
+_RESERVE_BYTES = 16 << 20        # freed on failure so that clean-up still has memory
 _QUASI = frozenset({E.DATE, E.AGE})
+_COUNT_NAMES = ("files_total", "files_sanitized", "files_quarantined", "records_processed",
+                "identifiers_detected", "records_linked", "records_generalized",
+                "records_suppressed", "records_quarantined")
 
 
 @dataclass
@@ -58,6 +65,7 @@ class RunResult:
     files: list[dict] = field(default_factory=list)
     records: list[dict] = field(default_factory=list)
     counts: dict = field(default_factory=dict)
+    entities: dict = field(default_factory=dict)
     seconds: float = 0.0
 
 
@@ -77,11 +85,22 @@ class Pipeline:
     def run(self, input_dir: Path, output_dir: Path) -> RunResult:
         started = time.monotonic()
         input_dir, output_dir = _check_paths(input_dir, output_dir)
-        sanitized = output_dir / "sanitized"
-        sanitized.mkdir(parents=True, exist_ok=True)
+        release = Release(output_dir)
+        states: list[FileState] = []
+        reserve = bytearray(_RESERVE_BYTES)
+        try:
+            release.open()
+            return self._run(input_dir, release, states, started)
+        except BaseException:
+            del reserve
+            release.abort()
+            self._report_failure(output_dir, states, time.monotonic() - started)
+            raise
 
-        states = [FileState(ingest.read_file(path, input_dir, self.policy))
-                  for path in ingest.list_files(input_dir)]
+    def _run(self, input_dir: Path, release: Release, states: list[FileState],
+             started: float) -> RunResult:
+        for path in ingest.list_files(input_dir):
+            states.append(FileState(ingest.read_file(path, input_dir, self.policy)))
         for state in states:
             state.reason = state.item.reason
         self.log.event("ingested", files=len(states))
@@ -92,7 +111,8 @@ class Pipeline:
 
         knowledge = Knowledge(self.lexicon)
         knowledge.learn([s.doc for s in states if s.alive])
-        self._each(states, "sweep", lambda s: self._apply_knowledge(s, knowledge))
+        auditor = Auditor(self.lexicon)
+        self._each(states, "sweep", lambda s: self._apply_knowledge(s, knowledge, auditor))
 
         reference_year = self._reference_year(states)
         self._date_orders(states)
@@ -101,25 +121,38 @@ class Pipeline:
                        patients=len({c.pseudonym for c in contexts.values() if c.pseudonym}))
 
         redactor = Redactor(self.lexicon, self.privacy, knowledge)
-        self._each(states, "redact",
-                   lambda s: self._redact(s, redactor, sweeper, contexts, reference_year))
-        self._name_outputs(states, knowledge, sweeper)
-        self._each(states, "write",
-                   lambda s: write.write_text_file(sanitized / s.output, write.serialize(s.doc)))
-        # a file that failed while being written must leave nothing behind
-        for state in states:
-            if not state.alive and state.output:
-                (sanitized / state.output).unlink(missing_ok=True)
+        self._each(states, "redact", lambda s: self._redact(
+            s, redactor, sweeper, contexts, reference_year, auditor))
+        repairs: Counter = Counter()
+        self._each(states, "audit", lambda s: repairs.update(found=auditor.repair(s.doc)))
+        self._name_outputs(states, knowledge, sweeper, auditor)
+        self._each(states, "stage", lambda s: self._stage(s, release, auditor))
+        self.log.event("verified", files=sum(s.alive for s in states),
+                       repairs=repairs["found"])
 
-        result = self._report(states, redactor, time.monotonic() - started)
-        write.write_records(output_dir / "records.jsonl", result.records)
-        write.write_report(output_dir / "report.json", result.files, result.counts,
-                           dict(self._entities), result.seconds, peak_rss_mb())
+        result = self._report(states, redactor, auditor, time.monotonic() - started)
+        report = write.build_report(result.files, result.counts, result.entities,
+                                    result.seconds, peak_rss_mb())
+        release.publish(result.records, report, [s.output for s in states if s.alive])
         self.log.event("done", **{k: result.counts[k] for k in
                                   ("files_total", "files_sanitized", "files_quarantined",
                                    "records_processed", "records_linked")},
                        seconds=round(result.seconds, 2))
         return result
+
+    def _report_failure(self, output_dir: Path, states: list[FileState],
+                        seconds: float) -> None:
+        """Say plainly that nothing was released. Never hides the original error."""
+        try:
+            files = [{"input_sha256": s.item.sha256, "output": None, "status": "quarantined",
+                      "reason": s.reason or "run_failed"} for s in states]
+            counts = dict.fromkeys(_COUNT_NAMES, 0)
+            counts.update(files_total=len(files), files_quarantined=len(files))
+            (output_dir / "sanitized").mkdir(parents=True, exist_ok=True)
+            write.write_report(output_dir / "report.json", write.build_report(
+                files, counts, {}, seconds, peak_rss_mb(), status="failed"))
+        except Exception as error:  # noqa: BLE001 - report the class only
+            self.log.problem("failure_report_not_written", error=error)
 
     def _each(self, states: list[FileState], stage: str, action, needs_doc: bool = True) -> None:
         for state in states:
@@ -138,13 +171,15 @@ class Pipeline:
     def _parse(self, state: FileState) -> None:
         state.doc = documents.parse(state.item, self.lexicon)
 
-    def _apply_knowledge(self, state: FileState, knowledge: Knowledge) -> None:
+    def _apply_knowledge(self, state: FileState, knowledge: Knowledge,
+                         auditor: Auditor) -> None:
         for record in state.doc.records:
             personal = any(m.etype not in _QUASI for _, m in record.mentions())
             for segment in record.segments:
                 self._merge(segment, knowledge.sweep(segment, personal))
         for segment in state.doc.file_segments():
             self._merge(segment, knowledge.sweep(segment, False))
+        auditor.learn(state.doc)
 
     def _merge(self, segment: Segment, extra: list) -> None:
         if not extra or segment.field is F.ATTACHMENT:
@@ -251,7 +286,8 @@ class Pipeline:
         return contexts, sweeper
 
     def _redact(self, state: FileState, redactor: Redactor, sweeper: NameSweeper,
-                contexts: dict[str, PatientContext], reference_year: int) -> None:
+                contexts: dict[str, PatientContext], reference_year: int,
+                auditor: Auditor) -> None:
         for record in state.doc.records:
             context = contexts[record.key]
             for segment in record.segments:
@@ -265,11 +301,33 @@ class Pipeline:
         for segment in state.doc.file_segments():
             self._merge(segment, sweeper.sweep(segment, None))
             redactor.segment(segment, loose)
+        auditor.learn(state.doc)
+
+    def _stage(self, state: FileState, release: Release, auditor: Auditor) -> None:
+        """Write one file to the stage, read it back and refuse it if anything is wrong."""
+        try:
+            path = release.add(state.output, write.serialize(state.doc))
+            written = self._reread(state.doc, path.read_bytes().decode("utf-8"))
+            faults = validate.problems(state.doc, written)
+            if auditor.leaks(written):
+                faults.insert(0, "self_scan_failed")     # the graver of the faults
+        except BaseException:
+            release.discard(state.output)
+            raise
+        if faults:
+            release.discard(state.output)
+            raise QuarantineError(faults[0])
+
+    def _reread(self, source: Document, text: str) -> Document:
+        kind = DocKind.JSON if source.kind is DocKind.FHIR else source.kind
+        item = ingest.InputFile(rel=source.rel, sha256=source.sha256, text=text, kind=kind,
+                                delimiter=source.options.get("delimiter", ","))
+        return documents.parse(item, self.lexicon)
 
     # ---------------------------------------------------------------- file names
 
     def _name_outputs(self, states: list[FileState], knowledge: Knowledge,
-                      sweeper: NameSweeper) -> None:
+                      sweeper: NameSweeper, auditor: Auditor) -> None:
         """Rename any path component that contains personal data."""
         renamed: dict[str, str] = {}
         taken: set[str] = set()
@@ -285,7 +343,7 @@ class Pipeline:
                 prefix = "/".join(parts[:position + 1])
                 if prefix not in renamed:
                     renamed[prefix] = self._safe_component(part, is_file, prefix, state,
-                                                           knowledge, sweeper)
+                                                           knowledge, sweeper, auditor)
                 new_parts.append(renamed[prefix])
             proposals.append((state, "/".join(new_parts)))
         taken.update(path.casefold() for state, path in proposals if path == state.item.rel)
@@ -301,14 +359,15 @@ class Pipeline:
             state.output = path
 
     def _safe_component(self, part: str, is_file: bool, prefix: str, state: FileState,
-                        knowledge: Knowledge, sweeper: NameSweeper) -> str:
+                        knowledge: Knowledge, sweeper: NameSweeper, auditor: Auditor) -> str:
         stem, dot, suffix = part.rpartition(".") if is_file and "." in part[1:] \
             else (part, "", "")
         segment = Segment(stem, field=F.PATH, channel=Channel.METADATA)
         segment.mentions = self.detector.detect_segment(segment)
         self._merge(segment, knowledge.sweep(segment, False))
         self._merge(segment, sweeper.sweep(segment, None))
-        if not any(m.etype not in _QUASI for m in segment.mentions):
+        if not any(m.etype not in _QUASI for m in segment.mentions) \
+                and auditor.is_clean(stem, path=True):
             return part
         token = self.secret.mac("filename", f"{state.item.sha256}\x00{prefix}" if is_file
                                 else prefix).hex()[:8]
@@ -316,10 +375,10 @@ class Pipeline:
 
     # ------------------------------------------------------------------- report
 
-    def _report(self, states: list[FileState], redactor: Redactor,
+    def _report(self, states: list[FileState], redactor: Redactor, auditor: Auditor,
                 seconds: float) -> RunResult:
         files, records = [], []
-        processed = linked = generalized = 0
+        processed = linked = generalized = withheld = 0
         for state in states:
             entry = {"input_sha256": state.item.sha256}
             if not state.alive:
@@ -334,13 +393,15 @@ class Pipeline:
                 processed += 1
                 if not record.patient and not any(True for _ in record.mentions()):
                     continue            # nothing about a patient in this record
+                if not auditor.is_clean(record.loc):
+                    withheld += 1       # a locator built from a key that names someone
+                    continue
                 linked += record.patient is not None
                 generalized += record.generalized
                 records.append({"file": output, "loc": record.loc, "patient": record.patient,
                                 "status": "generalized" if record.generalized else "sanitized"})
         records.sort(key=lambda r: (r["file"], _natural(r["loc"])))
         sanitized = sum(f["status"] == "sanitized" for f in files)
-        self._entities = redactor.counts
         counts = {
             "files_total": len(files),
             "files_sanitized": sanitized,
@@ -351,9 +412,10 @@ class Pipeline:
             "records_linked": linked,
             "records_generalized": generalized,
             "records_suppressed": 0,
-            "records_quarantined": 0,
+            "records_quarantined": withheld,
         }
-        return RunResult(files=files, records=records, counts=counts, seconds=seconds)
+        return RunResult(files=files, records=records, counts=counts,
+                         entities=dict(redactor.counts), seconds=seconds)
 
 
 def _natural(loc: str) -> list:

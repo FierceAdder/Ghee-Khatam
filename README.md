@@ -69,7 +69,8 @@ output/
 ## Pipeline
 
 ```
-ingest -> parse -> detect -> learn & sweep -> date order -> link -> redact + privacy -> write
+ingest -> parse -> detect -> learn & sweep -> date order -> link -> redact + privacy
+       -> self-scan & repair -> stage & verify -> publish
 ```
 
 | Stage | Module | What it does |
@@ -83,7 +84,9 @@ ingest -> parse -> detect -> learn & sweep -> date order -> link -> redact + pri
 | Link | `wards/link.py` | Strong IDs first, then name plus a unique second clue; refuses merges that conflict; `null` when unsure |
 | Sweep | `wards/sweep.py` | Removes every known spelling of a patient's names, in either script |
 | Privacy | `wards/privacy.py`, `redact.py` | Per-patient HMAC date shift, 5-year age bands, village to district, PIN prefix, typed tokens |
-| Write | `wards/write.py` | Format-preserving writers, report, records |
+| Self-scan | `wards/audit.py` | Searches the finished values for every identifier, full name and address phrase seen in the input, through disguises and encodings; repairs hits |
+| Verify | `wards/validate.py` | Re-reads each staged file: CSV shape, text lines, JSON structure, no new FHIR faults, no remaining hits; otherwise quarantines it |
+| Publish | `wards/release.py`, `write.py` | Format-preserving writers; staging inside the output folder; atomic renames with `report.json` last |
 
 ### Privacy rules
 
@@ -105,9 +108,11 @@ run.
 - The secret is read once, held in an object that cannot be printed or serialised, and a
   run without it is refused.
 - Logs carry only counts, reason codes, exception class names and file-hash prefixes.
-- No temporary files; everything is held in memory. Input is opened read-only.
-- A failure in one file quarantines that file; a failure in a dataset-wide stage exits
-  non-zero, so a partial release is never reported as complete.
+- No temporary files outside the output folder; only redacted bytes are ever written.
+  Input is opened read-only. Core dumps are disabled.
+- A failure in one file quarantines that file. A failure in a dataset-wide stage (or
+  `SIGTERM`, or running out of memory) removes everything staged, writes a report marked
+  `"status": "failed"` and exits non-zero.
 
 ## Development
 
@@ -134,7 +139,8 @@ in [SCORES.md](SCORES.md).
   credit the scorer awards for a generalised birth date.
 - A birth date that is unlabelled everywhere in a patient's records is treated as an
   ordinary date and shifted.
-- There is no final self-scan of the release before exit (planned, Phase 8).
+- The self-scan can only find what detection saw somewhere: a name that was never
+  detected anywhere is not in its list. It does not search for birth dates.
 - XML, PDF, images, JSON Lines and legacy non-Unicode Hindi encodings are quarantined,
   not cleaned.
 - Memory grows with input size (about 220 MB for a 12 MB input, 800 MB for 47 MB).

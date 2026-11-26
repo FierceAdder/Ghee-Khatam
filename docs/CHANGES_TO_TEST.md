@@ -19,11 +19,11 @@ score would notice.
 
 | ID | Change to test | How to measure | Keep if | Status |
 |---|---|---|---|---|
-| T-01 | Write to a staging folder inside the output folder, publish by rename, write `report.json` last | Kill the run at each stage; inject write failures | No partial release ever looks complete; nothing staged remains after a clean failure | planned (6) |
-| T-02 | Self-scan of the finished files using the scorer's normalisation (NFKC, homoglyphs, zero-width, Indic digits, accents, base64, hex, escapes) | Plant known identifiers into writer paths; measure false positives on clean documents | Every plant is caught; clean documents stay byte-identical | planned (6) |
-| T-03 | Repair a self-scan hit instead of dropping the file | Count files repaired and quarantined | Fewer lost files than quarantine-only, no new leaks | planned (6) |
-| T-04 | Structural check of each output (CSV shape, JSON key paths and types, text line count, FHIR references) | Compare input and output structure | Only errors we introduced cause quarantine | planned (6) |
-| T-05 | Process hardening: no core dumps, PII-free failure report, memory reserve | Force `MemoryError` and `SIGTERM` | Staging removed, non-zero exit, no values printed | planned (6) |
+| T-01 | Write to a staging folder inside the output folder, publish by rename, write `report.json` last | Kill the run at each stage; inject write failures | No partial release ever looks complete; nothing staged remains after a clean failure | kept: failures injected at link and at each of the three renames leave nothing released |
+| T-02 | Self-scan of the finished files using the scorer's normalisation (NFKC, homoglyphs, zero-width, Indic digits, accents, base64, hex, escapes) | Plant known identifiers into writer paths; measure false positives on clean documents | Every plant is caught; clean documents stay byte-identical | kept: all 18 planted disguises found; clean documents unchanged; 0 repairs needed on practice data |
+| T-03 | Repair a self-scan hit instead of dropping the file | Count files repaired and quarantined | Fewer lost files than quarantine-only, no new leaks | kept: a forgotten column is repaired and the file kept |
+| T-04 | Structural check of each output (CSV shape, JSON key paths and types, text line count, FHIR references) | Compare input and output structure | Only errors we introduced cause quarantine | kept: injected writer faults quarantine only the affected file; 0 false quarantines on practice data and a 10x copy |
+| T-05 | Process hardening: no core dumps, PII-free failure report, memory reserve | Force `MemoryError` and `SIGTERM` | Staging removed, non-zero exit, no values printed | kept: forced MemoryError and SIGTERM exceptions release nothing. A real signal was not sent |
 | T-06 | `PR_SET_DUMPABLE=0` | Run under a memory watchdog that reads `/proc` | The watchdog still works. Low security gain, unknown breakage risk | deferred |
 | T-07 | Restrictive `umask` on outputs | Read outputs as a different user | The scorer can still read them. Risky if it runs as another user | rejected for now |
 
