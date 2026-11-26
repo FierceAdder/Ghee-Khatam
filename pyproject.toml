@@ -1,0 +1,11 @@
+[project]
+name = "secret-wards"
+version = "0.5.0"
+description = "Offline, CPU-only, LLM-free privacy firewall for hospital records"
+requires-python = ">=3.10"
+dependencies = []
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-p no:cacheprovider"
+filterwarnings = ["error"]

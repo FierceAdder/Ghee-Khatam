@@ -1,0 +1,2 @@
+# The firewall uses only the Python standard library (3.10 or newer).
+# Nothing is downloaded during setup or at run time.

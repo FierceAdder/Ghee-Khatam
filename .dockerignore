@@ -1,0 +1,8 @@
+.git
+.venv
+my_output*
+**/__pycache__
+**/*.pyc
+**/.DS_Store
+.env
+*.md

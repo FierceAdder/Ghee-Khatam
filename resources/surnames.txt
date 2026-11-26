@@ -1,0 +1,58 @@
+# Common Indian surnames and name suffixes (general public knowledge; never from dev/).
+acharya adhikari agarwal aggarwal agnihotri agrawal ahirwar ahluwalia ahmad ahmed
+ahuja aiyar ajmera akhtar alam alvi ambani ambedkar amin ansari anand antony apte
+arora arya ashraf asthana atwal awasthi awasthy azmi babu bachchan bagchi baghel
+bagri baig bains bajaj bajpai bajpayee bakshi balakrishnan bali banerjee banik
+bano bansal baranwal barik baruah barua basak basu batra bedi begum behera bhadauria
+bhagat bhalla bhandari bhardwaj bharti bhasin bhatia bhatnagar bhatt bhattacharjee
+bhattacharya bhatti bhonsle bhosale bhowmick bhuiyan bind bisht biswas bora borah
+bose brahmbhatt budhiraja butt chacko chadha chahal chakraborty chakravarty chand
+chanda chandel chandra chandran chatterjee chattopadhyay chaturvedi chaubey chaudhari
+chaudhary chaudhry chauhan chaurasia chawla cheema chettiar chhabra chib chopra
+chouhan choudhary choudhury chowdhury dabas dahiya dalal dalmia damle dang dangi
+das dasgupta dash datta dayal deka deol desai deshmukh deshpande dev devi dewan
+dhaka dhaliwal dhawan dhillon dhingra dhiman dhobi dhoni dikshit dinkar dixit
+dogra doshi dua dube dubey dutt dutta dwivedi fadnavis farooqui faruqi fernandes
+fernando francis gaba gadgil gaikwad gandhi ganguly garewal garg gaur gautam gawande
+george ghai ghosal ghose ghosh gill giri gode goel gogoi gohil gokhale gomes gond
+gonsalves gopal goswami gounder goyal grewal grover guha gujral gujjar gulati gupta
+gurjar gurung haldar handa hans hasan hashmi hazarika hegde hooda hora hossain
+hussain idrisi iqbal islam iyengar iyer jadaun jadeja jadhav jaffrey jain jaiswal
+jaiswar jakhar jamwal jana jani jat jatav jauhari jena jha jindal johar john johri
+joseph joshi juneja kabir kachroo kadam kakkar kakar kakkad kalita kalra kamath
+kamble kamboj kanaujia kang kannan kanojia kansal kapadia kapoor kar karmakar
+karnik kashyap katara kataria katiyar kaul kaur kaushal kaushik keshri kewat khalsa
+khan khandelwal khanna khare khatri khatun khatoon kher khosla khurana kidwai
+kirar kishore kochhar kohli koiri kol kori koshy koul krishnamurthy krishnan kshatriya
+kukreja kulkarni kulshrestha kumar kumari kundu kureel kurian kurmi kushwaha lahiri
+lakra lal lamba lekhi lobo lodha lodhi lohia luthra madaan madan madhwal mahajan
+mahant mahapatra mahato maheshwari mahto maiti majhi majumdar makhija malaviya malhotra
+malik mall mallick mallya malviya mandal mane mangal manjhi manna mansuri marwah
+masih mathew mathur matta maurya mazumdar meena meghwal mehra mehrotra mehta memon
+menon mirza mishra misra mistry mitra mittal modi mohanty mondal monga mukherjee
+mukhopadhyay mullick munda murmu murthy muthu nag nagar nagi naidu naik nair nambiar
+namboodiri nanda nandi nandy narang narayan narayanan narula nath nautiyal navin
+nayak nayar nayyar negi nehra nigam nisad nishad ojha oraon oza padhi pahwa pai pal
+palit palta panchal pande pandey pandeya pandit pandya panicker panigrahi pant parekh
+parihar parikh parmar parveen pasi paswan patel pathak pathan patil patnaik patra
+paul pawar pereira phogat phukan pillai pinto poddar prabhu pradhan prajapati prakash
+prasad priyadarshi puri purohit pushkarna qadri quraishi qureshi raghav raghavan
+rahman rai raikwar raina raizada raj raja rajan rajbhar rajput raju rakshit ram
+ramakrishnan raman ramaswamy rana randhawa ranga rangarajan rao rastogi rathi rathod
+rathore ratra raut rautela raval rawal rawat ray reddy rehman rizvi rodrigues rohatgi
+rohilla roy sabharwal sachan sachdeva sahai sahay sahni sahoo sahu saikia saini
+sait saiyed sakhare saksena saluja samal samant sandhu sanghvi sangwan sankar sanyal
+sapra sarabhai saraf saraswat sardar sareen sarin sarkar sarma sastry sathe satpathy
+sawant saxena sayed sehgal sekhon sen sengar sengupta seth sethi shaikh shah shaheen
+shakya shami shankar shanker sharma shastri shekhawat sheikh shekh shenoy shergill
+shetty shinde shirke shivhare shrivastav shrivastava shroff shukla siddiqi siddique
+siddiqui sidhu sikarwar sikdar singhal singhania singh sinha sirohi sisodia sivaraman
+sodhi solanki som sonawane sonkar sood soni srinivasan srivastav srivastava subramanian
+sud sudan suri suryavanshi swain swaminathan swamy syed tagore taneja tandon tanwar
+taylor teli tewari thakkar thakur thapa tharoor thomas tikoo tiwari tiwary tokas
+tomar tripathi tripathy trivedi tuli tyagi tyagi uniyal upadhyay upadhyaya usmani
+vaidya vaish vaishnav varghese varma vasu vats venkataraman venkatesh verghese verma
+vig vimal virk vishwakarma vohra vora vyas wadhwa wadia walia wani warrier waris
+yadav yagnik zaidi zakaria zaman
+wangmo wangchuk lepcha bhutia sherpa tamang limbu chhetri pradhan marak sangma momin
+lyngdoh kharkongor syiem nongrum shullai

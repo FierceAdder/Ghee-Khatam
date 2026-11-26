@@ -1,0 +1,51 @@
+name: secret-wards
+
+# The same constraints as the evaluation sandbox: no network, 2 CPUs, 4 GB, and nothing
+# writable except the output folder and a private /tmp.
+x-sandbox: &sandbox
+  network_mode: none
+  read_only: true
+  cap_drop: [ALL]
+  security_opt: ["no-new-privileges:true"]
+  cpus: 2
+  mem_limit: 4g
+  pids_limit: 256
+  tmpfs:
+    - /tmp:size=512m
+
+services:
+  firewall:
+    <<: *sandbox
+    image: secret-wards:latest
+    build: {context: ., target: runtime}
+    # run as the calling user so the output files belong to them
+    user: "${HOST_UID:-10001}:${HOST_GID:-10001}"
+    environment:
+      # taken from your shell at run time; never baked into the image
+      RAKSHA_SECRET: ${RAKSHA_SECRET:-}
+    volumes:
+      - ${INPUT_DIR:-../Secret-Wards-Toolkit/dev/input}:/data/input:ro
+      - ${OUTPUT_DIR:-./my_output}:/data/output
+
+  test:
+    <<: *sandbox
+    profiles: [test]
+    image: secret-wards:test
+    build: {context: ., target: test}
+    environment:
+      TOOLKIT_DIR: /toolkit
+    volumes:
+      - ${TOOLKIT_DIR:-../Secret-Wards-Toolkit}:/toolkit:ro
+
+  dev:
+    <<: *sandbox
+    profiles: [dev]
+    image: secret-wards:test
+    build: {context: ., target: test}
+    command: ["bash", "tools/run_dev.sh", "/tmp/work"]
+    environment:
+      TOOLKIT_DIR: /toolkit
+      PYTHON: python
+      SHOW: ${SHOW:-10}
+    volumes:
+      - ${TOOLKIT_DIR:-../Secret-Wards-Toolkit}:/toolkit:ro

@@ -1,0 +1,110 @@
+# Words that are never part of a person's name. Matched case-insensitively in Latin and
+# exactly in Devanagari. Several words per line.
+
+# English function words
+a about above after again against all also am an and any are as at be because been
+before being below between both but by can cannot could did do does doing down during
+each few for from further had has have having he her here hers herself him himself his
+how i if in into is it its itself just me more most my myself no nor not now of off on
+once only or other our ours ourselves out over own same she should so some such than
+that the their theirs them themselves then there these they this those through to too
+under until up very was we were what when where which while who whom why will with
+would you your yours yourself yourselves per via vs etc
+
+# Hinglish function and conversation words
+ka ki ke ko ne se hai hain tha thi the mein me par aur ya nahi nahin nhi koi kuch kya
+kyun kyu kab kahan kaise abhi bhi ho hua hui hue raha rahi rahe diya diye di liya
+liye gaya gayi gaye karo kare karna karein bola bole boli batao bataya lena dena wala
+wale wali theek thik accha achha raat din subah shaam dopahar kal aaj parso neend
+khana pani bukhar bukhaar dard pet sar sir ulti dast khansi zukam jukam kamzori
+chakkar saans takleef problem dawa dawai goli sui ilaj ilaaj mareez marij rogi
+parivar ghar gaon gram zila jila pata naam umra ling pita pati patni beta beti
+maa baap chal phir sakte sakta sakti band lagatar thoda bahut zyada kam jyada sugar
+control utar chadh se tak liye saath baad pehle andar bahar upar neeche agle pichle
+hafte hafta mahine mahina saal ji
+
+# documents, forms, labels and administration
+patient patients pt name age sex gender male female address mobile mob phone contact
+no number id uhid mrn ipd opd reg registration date time day days week weeks month
+months year years yr yrs old hospital clinic ward bed room unit department dept
+medicine medical surgery surgical neurology cardiology pulmonology orthopaedics
+orthopedics paediatrics pediatrics gynaecology gynecology obstetrics oncology
+nephrology urology dermatology psychiatry ophthalmology ent radiology pathology
+emergency icu casualty report reports result results test tests sample lab labs
+laboratory diagnostic diagnostics summary discharge admission admitted discharged
+note notes nursing visitor visitors log round rounds history complaint complaints
+presenting course advice review follow followup referral referred referring received
+attendant relative guardian father mother husband wife son daughter care of self
+informant witness witnessed consent signed signature called caller callback reported
+reviewed consultant doctor doctors dr nurse sister staff officer nodal worker
+anm clerk records record export exported system version protocol formulary reference
+range ranges census occupied beds cases trip from remarks status category schedule
+strength form drug drugs dose frequency duration route tab tablet cap capsule inj
+injection syp syrup sachet inhaler inh drops ointment cream gel iv im sc po od bd tds
+qid sos hs stat prn puffs puff units unit mg mcg ml gm kg bp pulse temp spo2 rr rbs
+fbs ppbs hba1c haemoglobin hemoglobin platelet count total wbc rbc serum creatinine
+sodium potassium urea bilirubin glucose blood sugar random fasting tsh loinc icd code
+amount bill billing claim claims policy insurance payer package procedure approved
+pending settled rejected cash tpa scheme card aadhaar aadhar pan email dob birth
+district distt dist tehsil taluk block village vill post police station thana state
+country pin pincode postal zip house flat plot door street road lane gali mohalla
+colony nagar basti tola purwa chowk bazar bazaar market near opposite opp behind
+beside next temple mandir masjid mosque church gurudwara school college bhawan bhavan
+panchayat tank tanki station bus stand crossing circle park
+
+# titles, honorifics and relation words (handled separately, never name tokens)
+mr mrs ms miss shri shree smt km late sri prof er adv ji jee sahab saheb sahib
+saab didi behen behenji bahen bahenji ben bhai bhaiya bhaiyya babu amma mataji bhabhi
+chacha chachu chachi mama mami mausi mausa nana nani dada dadi papa mummy uncle aunty
+tau tai jiju madam sir baba beta beti dr doctor sahiba
+
+# sentence starters and groups that follow "by", "ji", "ko" or a title
+iska iski uska uski inka inki unka unki isko usko inko unko aapka aapki aapko mera meri
+tera teri hamara hamari humara sab sabhi kisi jiska jisko ye yeh woh vo wo bacche bachche
+bachcha mahila aadmi vyakti sahi galat bilkul bas ab jab tab agar lekin magar phir dobara
+haan han arre namaste madad reception desk team counter ambulance police family relatives
+neighbours neighbors health checkup screening camp investigation investigations findings
+treatment plan advised started continue given reviewed
+
+# clinical narrative verbs
+complains complained presented presents denies reports states stated conscious oriented
+improved education counselled counseled known case seen came resident residing
+
+# months and days
+january february march april june july august september october november december jan
+feb mar apr jun jul aug sep sept oct nov dec monday tuesday wednesday thursday friday
+saturday sunday today tomorrow yesterday morning afternoon evening night next
+
+# messaging
+forwarded attachment attached message call please kindly thanks thank regards hello
+dear ok okay yes forward pdf jpg image photo scan scanned file document
+
+# state and country
+uttar pradesh india yugaantar
+
+# Devanagari function words
+का की के को ने से है हैं था थी थे में पर और या नहीं कोई कुछ क्या कब कहाँ कैसे अभी भी हो
+हुआ हुई हुए रहा रही रहे दिया दिए दी लिया लिए गया गई गए करें करना करो बोला लेना देना वाला
+वाले वाली ठीक रात दिन सुबह शाम कल आज तक साथ बाद पहले अंदर बाहर पास पीछे सामने निकट लिए
+यह वह इस उस एक दो तीन चार पाँच कि जो तो ही मगर लेकिन
+
+आए आया आई आएँ आएं आओ आना गए गये देखा देखी देखे देखें देख बताया बताई कहा कही रखा रखी लाया लाई लाए भेजा भेजी
+मिला मिली मिले लगा लगी लगे चला चली चले सोया सोई खाया खाई पिया रही रहे आराम हालत स्थिति ठीक सुधार
+
+निवासी निवास रहने रहती रहता वाली
+
+# Devanagari forms, documents and medicine
+नाम उम्र आयु लिंग वर्ष साल महीना महीने सप्ताह हफ़्ते हफ्ते महिला पुरुष स्त्री बालक बालिका
+मरीज़ मरीज रोगी पति पत्नी पिता माता पुत्र पुत्री अभिभावक रिश्तेदार पता मकान नं संख्या
+ग्राम गांव गाँव तहसील जिला ज़िला राज्य पिन कोड मोबाइल फ़ोन फोन आधार पंजीकरण सं आईपीडी
+ओपीडी पर्चा डिस्चार्ज सारांश भर्ती छुट्टी तारीख तिथि दिनांक निदान सलाह दवा दवाई दवाइयाँ
+जांच जाँच रिपोर्ट अस्पताल चिकित्सालय डॉ डा डॉक्टर वार्ड बिस्तर बुखार खांसी खाँसी पेट दर्द
+सिर चक्कर उल्टी दस्त कमज़ोरी कमजोरी सांस साँस पेशाब संक्रमण फेफड़ों फेफड़े टीबी किडनी गुर्दे
+पुरानी बीमारी रोग सीओपीडी उच्च रक्तचाप रक्त चाप डायबिटीज़ डायबिटीज मधुमेह टाइप निमोनिया
+मलेरिया डेंगू काला अज़ार अजार दमा अस्थमा खून कमी एनीमिया थायराइड गोली कैप्सूल सुई इंजेक्शन
+मंदिर मस्जिद गुरुद्वारा गुरुद्वारे चर्च स्कूल विद्यालय पंचायत भवन टंकी बाज़ार बाजार मोहल्ला
+टोला नगर बस्ती पुरवा चौक गली मार्ग सड़क कार्यकर्ता आशा_कार्यकर्ता सेवा सदन उपचार इलाज
+श्री श्रीमती सुश्री स्वर्गीय जी साहब साहिब दीदी बहन बहनजी भाई भैया बाबू अम्मा माताजी
+भाभी चाचा चाची मामा मामी मौसी नाना नानी दादा दादी पापा मम्मी
+जनवरी फ़रवरी फरवरी मार्च अप्रैल मई जून जुलाई अगस्त सितंबर सितम्बर अक्टूबर अक्तूबर नवंबर
+नवम्बर दिसंबर दिसम्बर

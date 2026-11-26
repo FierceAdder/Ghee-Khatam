@@ -1,0 +1,2 @@
+# Test-only tools. Not needed to run the firewall.
+pytest==8.4.2

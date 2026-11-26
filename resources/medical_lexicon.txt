@@ -1,0 +1,131 @@
+# Medicines, conditions, procedures and clinical words. A token listed here is never
+# treated as a person's name by the free-text detectors. Several lower-case words per line.
+
+# generic medicines
+acarbose aceclofenac acetaminophen acetylcysteine acyclovir adrenaline albendazole
+allopurinol alprazolam ambroxol amikacin aminophylline amiodarone amitriptyline
+amlodipine amoxicillin amoxiclav amphotericin ampicillin artemether artesunate aspirin
+atenolol atorvastatin atropine azithromycin baclofen beclomethasone betahistine
+betamethasone bisacodyl bisoprolol bromhexine budesonide bupivacaine calcitriol
+calcium captopril carbamazepine carbidopa carvedilol cefadroxil cefazolin cefepime
+cefixime cefoperazone cefotaxime cefpodoxime ceftazidime ceftriaxone cefuroxime
+cephalexin cetirizine chloramphenicol chloroquine chlorpheniramine chlorthalidone
+cilnidipine cinnarizine ciprofloxacin citalopram clarithromycin clavulanate
+clindamycin clobazam clonazepam clopidogrel clotrimazole cloxacillin colchicine
+cotrimoxazole cyclophosphamide dapagliflozin deriphyllin dexamethasone
+dextromethorphan diazepam diclofenac dicyclomine digoxin diltiazem dimenhydrinate
+diphenhydramine dobutamine domperidone donepezil dopamine doxofylline doxycycline
+drotaverine duloxetine empagliflozin enalapril enoxaparin escitalopram esomeprazole
+ethambutol etodolac etoricoxib famotidine febuxostat fenofibrate fentanyl
+fexofenadine fluconazole fluoxetine fluticasone folic folate formoterol furosemide
+frusemide gabapentin gentamicin gliclazide glimepiride glipizide glyceryl
+griseofulvin haloperidol heparin hydralazine hydrochlorothiazide hydrocortisone
+hydroxychloroquine hydroxyzine hyoscine ibuprofen imipenem indapamide indomethacin
+insulin ipratropium irbesartan isoniazid isosorbide itraconazole ivermectin
+ketamine ketoconazole ketorolac labetalol lactulose lamivudine lansoprazole
+levetiracetam levocetirizine levodopa levofloxacin levosalbutamol levothyroxine
+lignocaine linagliptin linezolid lisinopril loperamide lorazepam losartan
+magnesium mannitol mebendazole mebeverine mefenamic mefloquine meropenem mesalamine
+metformin methotrexate methyldopa methylprednisolone metoclopramide metoprolol
+metronidazole midazolam mifepristone misoprostol montelukast morphine moxifloxacin
+mupirocin naproxen nateglinide nebivolol neostigmine nicorandil nifedipine
+nitrofurantoin nitroglycerin noradrenaline norethisterone norfloxacin nystatin
+ofloxacin olanzapine olmesartan omeprazole ondansetron ornidazole oseltamivir
+oxcarbazepine oxytocin pantoprazole paracetamol penicillin pheniramine phenobarbitone
+phenytoin pioglitazone piperacillin tazobactam piroxicam potassium pralidoxime
+pravastatin praziquantel prazosin prednisolone pregabalin primaquine prochlorperazine
+promethazine propofol propranolol propylthiouracil pyrazinamide pyridoxine quetiapine
+quinine rabeprazole ramipril ranitidine rifampicin rifaximin risperidone
+rosuvastatin salbutamol salmeterol sertraline sitagliptin sodium spironolactone
+streptokinase streptomycin sucralfate sulfasalazine sumatriptan tamsulosin
+telmisartan teneligliptin terbinafine terbutaline theophylline thiamine thyroxine
+ticagrelor tiotropium tizanidine tobramycin torsemide tramadol tranexamic
+triamcinolone trimethoprim ursodeoxycholic valproate valsartan vancomycin vecuronium
+verapamil vildagliptin voglibose warfarin zinc zolpidem ferrous sulphate sulfate
+ascorbate fumarate gluconate carbonate chloride bicarbonate lactate dextrose saline
+ringer ors multivitamin vitamin cholecalciferol cyanocobalamin methylcobalamin
+glargine aspart lispro detemir degludec mixtard actrapid
+
+# common Indian brand names
+dolo crocin calpol combiflam flexon zerodol voveran ultracet brufen disprin ecosprin
+augmentin moxikind clavam mox azithral azee taxim monocef zifi cifran ciplox norflox
+metrogyl flagyl oflox levoflox doxy pan pantocid pantop rantac aciloc omez razo
+domstal perinorm emeset ondem cyclopam meftal drotin buscopan avil allegra cetzine
+montair levocet asthalin duolin foracort budecort seroflo deriphylin ascoril
+benadryl grilinctus glycomet gluconorm amaryl glimy janumet istavel galvus jalra
+telma amlong stamlo losar repace envas cardace aten concor metolar storvas atorva
+rozavel clopilet thyronorm eltroxin shelcal calcimax neurobion becosules evion
+limcee zincovit electral enterogermina sporlac lomotil dulcolax cremaffin
+liv hifenac volini moov betnovate candid soframycin neosporin betadine savlon
+
+# conditions, symptoms and signs
+abdomen abdominal abscess acidity acute addison adenoma allergic allergy amoebiasis
+amnesia anaemia anemia aneurysm angina anorexia anxiety aphasia appendicitis
+arrhythmia arthritis ascites asthma ataxia atherosclerosis azar bacterial bell
+bleeding bradycardia breathless breathlessness bronchiectasis bronchitis burns
+calculus cancer carcinoma cardiac cataract cellulitis cerebral cervical
+cholecystitis cholelithiasis cholera chronic cirrhosis colic colitis coma
+congestion conjunctivitis constipation contusion convulsions copd cough cramps
+crohn cushing cyanosis cyst cystitis dehydration delirium dementia dengue
+dermatitis depression diabetes diabetic diarrhoea diarrhea diphtheria disease
+disorder dizziness dysentery dyspepsia dysphagia dyspnoea dyspnea dysuria eczema
+edema oedema embolism emphysema encephalitis epilepsy epistaxis essential fatigue
+fever filariasis fissure fistula fracture fungal gallstone gangrene gastric
+gastritis gastroenteritis giddiness glaucoma goitre gout haematuria haemorrhage
+headache hemiplegia hepatitis hernia herpes hiv hydrocele hypercholesterolemia
+hyperlipidemia hypertension hypertensive hyperthyroidism hypoglycaemia hypotension
+hypothyroidism hypoxia icterus infarction infection infectious inflammation
+influenza injury insomnia ischaemic ischemic jaundice kala kidney lymphoma malaise
+malaria malignant malnutrition measles melaena meningitis menorrhagia migraine
+mumps myalgia myocardial nausea necrosis neoplasm nephritis nephrotic neuralgia
+neuritis neuropathy obesity obstruction occlusion oliguria organism orchitis
+osteoarthritis osteoporosis otitis pain palpitation palsy pancreatitis paralysis
+parasitic parkinson peptic peritonitis pertussis pharyngitis piles pleural
+pneumonia polio polyuria pregnancy primary prolapse pruritus psoriasis pulmonary
+pyelonephritis pyrexia rabies rash renal respiratory retention retinopathy rheumatic
+rhinitis scabies sciatica sclerosis seizure sepsis septicaemia shock sinusitis
+snake bite sprain stenosis stones stroke swelling syncope syndrome syphilis
+tachycardia tetanus thalassaemia thrombosis tonsillitis trauma tremor tuberculosis
+tumour tumor typhoid ulcer unspecified uraemia urinary urticaria varicella vertigo
+viral vitiligo vomiting weakness wheeze wilson worm wound alzheimer huntington
+hodgkin kaposi marfan down turner klinefelter guillain barre raynaud sjogren
+behcet kawasaki meniere paget peyronie graves hashimoto leptospirosis chikungunya
+scrub typhus encephalopathy polycystic ovarian ovary endometriosis fibroid
+lupus erythematosus sarcoidosis amyloidosis wegener takayasu buerger hirschsprung
+
+# procedures and investigations
+angiography angioplasty appendicectomy appendectomy arthroscopy aspiration biopsy
+bronchoscopy bypass caesarean cesarean catheterisation catheterization
+cholecystectomy chemotherapy colonoscopy craniotomy cryotherapy curettage
+cystoscopy debridement delivery dialysis dilatation drainage echocardiography
+electrocardiogram endoscopy excision extraction fixation grafting haemodialysis
+hemodialysis hernioplasty herniorrhaphy hysterectomy implant incision inguinal
+intubation laparoscopic laparoscopy laparotomy ligation lithotripsy lumbar
+mastectomy nebulisation nebulization nephrectomy phacoemulsification physiotherapy
+prostatectomy puncture radiotherapy reduction repair resection section session
+splenectomy stenting stimulation suturing thyroidectomy tonsillectomy tracheostomy
+transfusion transplant tubectomy ultrasound ultrasonography vaccination vasectomy
+ventilation whipple pancreaticoduodenectomy brain xray radiograph scan mri ct
+ecg echo usg culture sensitivity smear antigen antibody serology widal
+
+# anatomy and general clinical words
+acute antibiotic antiseptic appetite arrival artery bile bladder body bone bowel
+brain breast chest chronic clinical condition conscious conservative conservatively
+critical cuff diet dietary discharged dressing drip ear elective examination eye
+fluid foot generalised generalized hand head heart hydration improved improvement
+intake joint knee leg limb liver loose lung management monitor monitoring mouth
+muscle neck nerve nil nose observation oral orally oxygen palpable pelvic
+physical postoperative preoperative prognosis recovery rectal recurrent rest salt
+severe shoulder significant skin spine spleen stable stage stomach stool symptoms
+symptomatic systolic diastolic temperature tenderness therapy throat thyroid tongue
+treated treatment urine uterus vaccine vein vital vitals weight height chronic
+mild moderate left right bilateral upper lower anterior posterior low high normal
+abnormal positive negative given advised avoid every hours hourly daily weekly
+monthly after before food meals empty water continue stop start started loose
+essential antibiotic chronic care schedule
+
+# facility words
+hospital hospitals clinic nursing home sadan seva sansthan trust charitable
+multispeciality multispecialty speciality specialty institute centre center
+diagnostics diagnostic pathology pathlabs laboratories laboratory imaging pharmacy
+dispensary sanstha chikitsalaya aushadhalaya in-house inhouse

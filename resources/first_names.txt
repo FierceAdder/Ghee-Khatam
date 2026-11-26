@@ -1,0 +1,195 @@
+# Common Indian given names (general public knowledge; never harvested from dev/ data).
+# One or more lower-case names per line, separated by spaces. Devanagari text is matched
+# against this list through transliteration, so no separate Devanagari list is needed.
+
+# female
+aadhya aaradhya aarti aarushi abha aditi afreen aisha aishwarya akanksha alisha alka
+amba ambika amrita amruta ananya angoori anita anjali anju ankita annapurna anshika
+anshu anu anupama anuradha anushka aparna apeksha archana arpita aruna asha ashwini
+asiya avni ayesha babita bano barkha basanti beena bela bhagwati bhanumati bharati
+bhavana bhavna bhawana bindiya bindu bimla bina chameli champa chanchal chanda
+chandni chandrakala chandrika charu chhaya chitra dakshina damini darshana daya
+deepa deepali deepika deepti devika dhara diksha dimple dipti disha divya draupadi
+durga ekta esha falguni farah farhana farida farzana fatima firoza gargi gauri
+gayatri geeta geetanjali gita gudiya gulab gulshan gunjan gurpreet hamida hansa
+harjeet harpreet harsha haseena heena hema hemlata himani hina indira indu ishita
+jagrati jahanvi jamila jamuna janki jasbir jasleen jasmeet jaswinder jaya jayanti
+jayshree jeenat jhanvi jyoti jyotsna kajal kalpana kalyani kamala kamini kamla
+kanchan kanika kanta karishma karuna kashish kaushalya kaveri kavita kavya keerti
+khushboo khushi kiran kirti komal kokila kranti krishna kritika kulwinder kumkum
+kumud kusum laajwanti lajja lakshmi lalita lata lavanya laxmi leela leelavati lila
+lipika lovely madhu madhubala madhuri mahima maina mala malati mallika malti mamta
+manasi mandakini mandeep manisha manju manjula manorama mansi mariam mary maya
+medha meena meenakshi meera megha meghna mehjabeen menaka mithlesh mohini momina
+monika moni mridula mukta muskan mumtaz munni nafisa nagma naina nalini namita
+namrata nanda nandini narmada nasima nasreen naushaba nayana nazia nazma neelam
+neelima neena neeru neeta neetu neha nidhi niharika nikita nilofar nirmala nisha
+nishtha nita nitu nivedita noor noorjahan nupur nusrat padma padmini pallavi pammi
+panna parineeta paramjeet parul parveen parvati parwati pavitra payal phoolmati
+phulwa pinki pooja poonam prabha pragati pragya pramila pratibha pratima praveena
+preeti prema premlata priti priya priyanka puja punam purnima pushpa rabia rachna
+radha radhika ragini rajani rajeshwari rajkumari rajni rajshree rakhi ramabai ramkali
+rampyari ramshree rani ranjana ranjeeta rashida rashmi rasika ratna raveena razia
+reena rehana rekha renu renuka reshma revati richa riddhi rina rita ritika ritu riya
+roma roopa roshni ruby ruchi ruchika rukhsana rukmini rupa rupali rupinder rubina
+sabiha sabina sadhana safiya sagarika saguna sahana saira sajida sakina sakshi salma
+saloni samiksha samina samreen sana sandhya sangeeta sangita sanjana santosh sapna
+sara sarah saraswati sarika sarita saroj sarojini sarla sasmita satwinder savita
+savitri sayra seema shabana shabnam shaheen shahida shahnaz shaila shakeela
+shakuntala shalini shama shamim shamima shampa shanta shanti sharda sharmila sheela
+sheetal shehnaz shikha shilpa shivani shobha shraddha shreya shrishti shruti shubha
+shweta siddhi simran sita smita sneha snehlata sofia sona sonal sonali sonam soni
+sonia sudha suhani sujata sukanya sukhmani sukhwinder sulekha sulochana suman
+sumati sumitra sunaina sunanda sunita suniti supriya surbhi surekha surinder
+surjeet sushila sushma suvarna swara swati sweta tabassum tahira tamanna tanu tanuja
+tanvi tara tarannum tasleem taslima trisha trishna tripti triveni tulsi uma urmila
+urvashi usha vaishali vandana vani varsha vasanti vasudha veena vibha vidya vijaya
+vijayalakshmi vimla vimlesh vineeta vinita vishakha yamini yashoda yasmeen yasmin
+yogita zahida zainab zakia zarina zeenat zoya zubaida
+
+# male
+aadil aakash aamir aarav aarif aaryan abbas abdul abhay abhijeet abhilash abhimanyu
+abhinav abhishek abid abrar achyut adarsh adil aditya adnan advait afroz aftab
+ahmad ahmed ajay ajeet ajit akash akbar akhil akhilesh akram akshay alam alok aman
+amanpreet amar amardeep ambar amir amit amitabh amjad amol amrit amrendra anand
+anant anas anil aniket animesh aniruddh anirudh anis ankit ankur ankush anmol
+ansh anshul anuj anup anurag anwar apoorv arbaaz archit arif arijit arjun arman
+armaan arnav arpan arshad arun arvind aryan asad aseem ashfaq ashish ashok ashraf
+ashutosh asif aslam asrar atal atharv atif atul avadhesh avinash avtar awadhesh
+ayaan ayush azad azeem azhar aziz babban babloo bablu babu babulal bachchan badal
+badri bahadur baijnath bajrang balbir baldev balkrishan balram balwant balwinder
+banke bansi bashir basheer beni bhagat bhagirath bhagwan bhagwat bhajan bharat
+bhaskar bhavesh bheem bholanath bhola bhupendra bhupinder bhushan bilal bipin
+birbal birendra bishan bishnu biswajit bittu bodhraj brahma braj brajesh brij
+brijendra brijesh brijlal brijmohan budhram chain chaman champak chanchal chand
+chander chandra chandrabhan chandrakant chandramohan chandrashekhar chandresh
+charan charanjit chaturbhuj chetan chhedi chhote chhotelal chiman chinmay chintu
+chirag chunnilal daljeet dalip damodar danish darbari darshan dashrath daulat
+dayanand dayaram dayashankar deenanath deep deepak deependra deepesh dev devanand
+devashish devendra devesh devi devraj dhananjay dhanraj dharam dharamveer dharmendra
+dharmesh dharmpal dhaval dheeraj dhirendra dhruv dilawar dileep dilip dilshad
+dinanath dinesh divyansh diwakar dulare durgesh dushyant dwarika ehsan eshan faheem
+faisal faiyaz faiz faizan farhan farid farooq faruk fateh fazal feroz firoz furqan
+gagan gajanan gajendra ganesh ganga gangadhar gangaram gaurav gautam ghanshyam
+ghulam girdhari girish gobind gokul gopal gopi gopinath govardhan govind gudda
+guddu guffran gulab gulzar gunjan gurbachan gurcharan gurdeep gurdev gurjeet gurmeet
+gurmukh gurnam gurpreet gursharan gurvinder habib hafeez haider hakim hamid hamza
+hanif hanuman hanumant harbans harbhajan hardeep hardik haresh hari harideo harihar
+harikesh harinder hariom hariprasad haris harish hariom harjinder harjit harkesh
+harmeet harmesh harnam harpal harsh harshad harshit harshvardhan harvinder hasan
+hashim hasnain hassan heera hem hemant hemendra hemraj himanshu hira hiralal hitesh
+hriday hukum humayun husain hussain ibrahim iftikhar ikram iliyas ilyas imran inder
+inderjeet inderpal indra indrajit indrapal intezar iqbal irfan irshad ishaan ishan
+ishtiyaq ishwar ismail israr itwari izhar jagan jagannath jagat jagdeep jagdish
+jagjeet jagjit jagmohan jagpal jai jaichand jaideep jaikishan jaimal jainarayan
+jaiprakash jaisingh jakir jalal jaleel jamal jameel jamil jamshed janak janardan
+janmejay jasbir jasdeep jaskaran jaspal jaspreet jaswant jatin jatinder javed jawahar
+jawed jay jayant jayesh jeet jeetendra jeevan jhabbu jignesh jishan jitender
+jitendra jitesh jivan joginder johny joseph juber jugal jugnu jwala kabir kadir
+kailash kaleem kali kalicharan kalim kalka kallu kalyan kamal kamaljeet kamlakant
+kamlesh kamran kanhaiya kanhaiyalal kanwar kapil karamjit karan karim kartar
+kartik karunesh kashi kashinath kaushal kaushik kavindra kayum kedar kedarnath
+kesar keshav ketan khalid khem khemchand khurshid khushal kifayat kirpal kirtan
+kishan kishore kishor krishan krishna krishnakant kripal kripashankar kuber kuldeep
+kuldip kulwant kumar kunal kundan kunwar kush kushal lakhan lakhbir lakhwinder
+laxman lakshman lal lalan lallan lallu lalit laltu laxmikant laxminarayan leeladhar
+liaqat lokendra lokesh lovekush lucky lukman madan madanlal madhav madhukar
+madhusudan magan mahabir mahadev mahaveer mahavir mahendra mahesh mahfooz mahipal
+mahmood mahtab maiku makhan makkhan malkhan malkeet mamraj man manas manav manbir
+mandeep mangal mangat mangeram mangesh manik manish manjeet manjit mann mannu
+manoj manohar mansoor manu manveer maqbool masood mata matadin mathura mayank
+mayur meghraj mehboob mehmood mehtab mevalal mihir milan milind minhaj mintu
+mithilesh mithun mohak mohammad mohan mohanlal mohd mohinder mohit mohsin moin
+mointuddin mukesh mukhtar mukul mukund mulayam munawar munna munnalal murali
+muralidhar murari murli murtaza musharraf mushtaq mustafa mustaq mustakeem mutahir
+nabi nadeem nafees nagendra nagesh nahar naim naimuddin najmul nakul nalin namdev
+naman nanak nand nandkishore nandlal nanhe narayan naresh narendra narender narinder
+narottam narsingh naseeb naseem naseer nasim nasir nathu nathuram naushad navdeep
+naveen navin navjot navneet nawab nayeem nazim nazir neelesh neeraj netrapal nihal
+nikhil nikhlesh nikunj nilesh niraj niranjan nirbhay nirmal nishant nishit nitesh
+nitin nitish niyaz noor nrupesh obaid om omar omkar ompal omprakash omveer onkar
+owais padam padmakar pakhi palash pankaj pannalal pappu paramhans paramjit paramveer
+paras parasnath pardeep paresh parimal parminder parmod parmeshwar parshuram
+partap parth parvez parvinder pashupati pawan peeyush pervez phool phoolchand piyush
+poonam prabhakar prabhat prabhjot prabhu pradeep pradip pradyumn prafull prahlad
+prajwal prakash pramod pranav praneet pranjal prasad prasanna prashant prashun
+pratap prateek pratham pratik praveen pravin prayag preetam prem premchand
+premnarayan premshankar pritam prithvi prithviraj priyank pritesh priyansh pukhraj
+pulkit puneet punit puran purshottam purushottam pushkar pushpendra qadir qaiser
+quasim rabindra rachit radhakrishna radhamohan radheshyam rafi rafiq raghav
+raghavendra raghu raghunandan raghunath raghuveer raghuvir rahees rahim rahmat
+rahul rais raj raja rajan rajaram rajat rajbahadur rajbir rajdeep rajeev rajendra
+rajender rajesh rajinder rajiv rajkamal rajkumar rajnarayan rajneesh rajnikant
+rajpal rajveer rakesh raman ramapati ramashankar ramavtar ramcharan ramchander
+ramchandra ramdas ramdayal ramdev ramdhani ramesh rameshwar ramgopal ramji ramkishan
+ramkrishna ramkumar ramlakhan ramlal ramnaresh ramnarayan ramniwas rampal ramprakash
+ramprasad ramraj ramroop ramsagar ramsevak ramswaroop ramu ramveer ranbir randhir
+ranjan ranjeet ranjit ranveer rasheed rashid ratan ratanlal ratnesh raufi raunak
+ravi ravinder ravindra ravish raza razzak rehan rehman riaz ricky rinku ripudaman
+rishabh rishi rishikesh ritesh ritik rituraj riyaz rizwan robin rohan rohit
+rohtash ronak roop roopchand roopesh roshan roshanlal ruchir rudra rupesh rustam
+saad saagar sabir sachchidanand sachin sadanand sadashiv sadiq safdar sagar sahab
+sahil sahdev saiful sajal sajid sajjad sajjan saket saksham salahuddin saleem salil
+salim salman sameer samir sampat samrat samsher samuel sanat sanchit sandeep
+sandesh sanjay sanjeev sanjiv sankalp sankar santlal santosh sanwar sarabjeet
+sarbjit sardar sarfaraz sarthak sartaj saroj sarvan sarvesh satbir satendra satish
+satnam satpal satvik satya satyajit satyam satyanarayan satyapal satyaprakash
+satyaveer satyendra saubhagya saurabh sayed sayyed seemant sehdev sevaram shaan
+shabbir shachindra shadab shafiq shah shahabuddin shahbaz shahid shahnawaz shahrukh
+shailendra shailesh shakeel shakil shakti shalabh shaligram shamim shamsher
+shamshad shamsul shankar shankarlal shantanu shanu shaqib sharad sharafat sharif
+shariq shashank shashi shashikant shatrughan shaukat sheetala sheikhar shekhar sher
+sherbahadur shiraz shiv shivam shivanand shivansh shivbalak shivcharan shivdutt
+shivendra shivesh shivkumar shivlal shivnath shivpal shivraj shivshankar shoaib
+shobhit shrawan shreekant shreepal shri shrikant shrikrishna shrinivas shriram
+shubham shuja shyam shyamlal shyamsundar siddharth siddhesh sikandar sitaram siyaram
+sobran sohan sohanlal sohail sompal somesh somnath sonu subhan subhash subodh
+sudama sudarshan sudeep sudesh sudhakar sudhanshu sudhir sufiyan sujeet sujit
+sukesh sukhbir sukhchain sukhdev sukhjinder sukhpal sukhram sukhvinder sukhwant
+sukhwinder sukumar sultan suman sumant sumeet sumer sumit sundar sunil sunny
+suraj surajbhan surajpal surendra surender suresh surinder surjan surjeet surjit
+surya suryabhan suryakant sushant sushil suyash swami swapnil swaran syed tabrez
+tahir tajinder talib tanmay tanveer tapan tapas tara tarachand tariq tarlok tarsem
+tarun tasleem tausif tauheed tejas tejinder tejpal tejveer thakur tilak tinku
+trilok trilokinath tribhuvan tripurari tufail tulsi tulsiram tushar uday udaybhan
+udayveer udit ujjwal umakant umang umar umashankar umed umesh upendra urooj usman
+utkarsh uttam vaibhav vakil vallabh vaman vansh varun vasant vasim vasudev ved
+vedant vedprakash veer veerendra veeru venkat vibhav vibhor vibhu vicky vidhan
+vidyasagar vidyut vijay vijayendra vijendra vikas vikash vikram vikrant vilas vimal
+vimlesh vinay vineet vinod vipin vipul viraj virat virendra virender vishal
+vishambhar vishnu vishwajeet vishwanath vishwas vivek vrindavan wahid wajid wali
+waqar waseem wasim wazir yadunath yadvendra yakub yaseen yash yashpal yashraj
+yashwant yaswant yatendra yogendra yogesh yogeshwar yudhishthir yunus yusuf yuvraj
+zafar zaheer zahid zakir zaman zameer zaved zeeshan ziaul zubair zuber zulfiqar
+
+# christian, sikh, jewish and parsi names common in India
+abraham agnes alex alice allan andrew angela anthony antony benjamin bernard caroline
+catherine charles christina christopher clara clement daniel david dennis dominic
+dorothy edward elizabeth emmanuel esther eugene francis george gloria grace gregory
+henry irene jacob james jennifer jerome jessy john jonathan joy joyce juliana julie
+lawrence leena linda lucy margaret maria martha martin mathew matthew michael monica
+nancy nathaniel nelson nicholas norbert patrick paul pauline peter philip rachel
+raphael rebecca richard robert rosaline rosamma rose roselin sebastian sharon shirley
+simon solomon sophia stella stephen susan teresa theresa thomas timothy veronica
+victor victoria vincent violet william
+
+amandeep arshdeep balwinder charanpreet dilpreet gagandeep gurinder gursimran
+harleen harmanpreet harsimran ishpreet jagroop jaskirat jasmine jaspinder kamalpreet
+karamveer kirandeep komalpreet lovepreet manpreet navpreet prabhdeep rajwinder
+ramandeep ravneet rupinderjit sandeep satinder simranjeet sukhdeep sukhmeet
+sukhpreet taranjit
+
+# south, east and north-east Indian names
+anandan arumugam ayyappan balaji balasubramanian chelladurai chidambaram dhanalakshmi
+elango ganesan geethanjali gopalakrishnan ilango ilavarasan jayalakshmi kannan
+karthik karuppasamy kumaran lakshmanan madhavan mahalakshmi manikandan marimuthu
+meenatchi murugan muthu muthulakshmi nagarajan natarajan palanisamy pandian perumal
+rajagopal rajendran ramachandran ramasamy ramaswamy rangan sankaran saravanan
+selvam selvi senthil shanmugam shanthi sivakumar subramaniam sundaram thangaraj
+thenmozhi velu venkatesan vijayakumar
+abhirup anirban arindam arnab ashima avijit bidisha biplab debabrata debasish
+dipankar indrani joydeep koushik moumita mousumi pallab paromita partha prabir
+pranab priyabrata ranajit rupankar sanchari saswati shampa sourav subhajit subrata
+sudipta suparna sutapa tanushree tapasi
+bhaskor dipjyoti hemanga junmoni nabajyoti pranjit
+tashi tenzin tsewang dolma dorjee pema sonam lobsang yangchen
