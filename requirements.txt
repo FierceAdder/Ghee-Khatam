@@ -1,3 +1,6 @@
+# Encryption at rest: the staging area, sealed input and encrypted quarantine
+# (wards/crypto.py). Required: without it the firewall refuses to start.
+cryptography>=42,<51
 # Run-time packages for the learned name check (config/policy.yaml: name_model: indicbert).
 # Without them the firewall still runs, on its rules alone (the run log says so).
 onnxruntime>=1.18,<2

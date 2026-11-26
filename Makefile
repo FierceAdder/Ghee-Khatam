@@ -1,6 +1,7 @@
 TOOLKIT ?= ../Secret-Wards-Toolkit
 INPUT   ?= $(TOOLKIT)/dev/input
 OUTPUT  ?= ./my_output
+SEALED  ?= ./my_output_sealed
 PYTHON  ?= python3
 COMPOSE ?= docker compose
 
@@ -11,7 +12,8 @@ export HOST_UID    := $(shell id -u)
 export HOST_GID    := $(shell id -g)
 
 .DEFAULT_GOAL := help
-.PHONY: help build run test dev run-local test-local dev-local check clean secret-set clean-output
+.PHONY: help build run test dev run-local test-local dev-local check clean secret-set clean-output \
+	seal run-sealed
 
 help:
 	@echo "Docker (recommended)"
@@ -23,6 +25,8 @@ help:
 	@echo "Without Docker"
 	@echo "  make run-local / test-local / dev-local"
 	@echo "  make check                         the organisers' pre-submit check"
+	@echo "  make seal [INPUT=dir SEALED=dir]   encrypt a folder of records (needs RAKSHA_SECRET)"
+	@echo "  make run-sealed [SEALED=dir]       sanitise a sealed folder, decrypting in memory"
 	@echo "  make clean                         remove local outputs and caches"
 
 build:
@@ -35,7 +39,7 @@ secret-set:
 clean-output:
 	@test -n "$(strip $(OUTPUT))" || { echo "OUTPUT must not be empty"; exit 2; }
 	rm -rf "$(OUTPUT_DIR)/sanitized" "$(OUTPUT_DIR)/report.json" "$(OUTPUT_DIR)/records.jsonl" \
-		"$(OUTPUT_DIR)/logs/run.jsonl"
+		"$(OUTPUT_DIR)/logs/run.jsonl" "$(OUTPUT_DIR)/quarantine" "$(OUTPUT_DIR)/.stage"
 	mkdir -p "$(OUTPUT_DIR)"
 
 run: secret-set clean-output
@@ -50,6 +54,13 @@ dev:
 run-local: secret-set clean-output
 	$(PYTHON) main.py --input "$(INPUT_DIR)" --output "$(OUTPUT_DIR)"
 
+# The output folder of "seal" must be new or empty.
+seal: secret-set
+	$(PYTHON) tools/seal.py --in "$(INPUT_DIR)" --out "$(SEALED)"
+
+run-sealed: secret-set clean-output
+	$(PYTHON) main.py --sealed "$(SEALED)" --output "$(OUTPUT_DIR)"
+
 test-local:
 	$(PYTHON) -B -m pytest -q
 
@@ -60,5 +71,5 @@ check:
 	$(PYTHON) "$(TOOLKIT_DIR)/check_submission.py" --repo . --run --input "$(INPUT_DIR)"
 
 clean:
-	rm -rf my_output
+	rm -rf my_output my_output_sealed
 	find . -name __pycache__ -type d -prune -exec rm -rf {} +

@@ -4,9 +4,10 @@ An offline, CPU-only, LLM-free firewall that cleans a folder of hospital records
 Hindi and Hinglish. It removes personal data, keeps medical values exactly, gives each
 patient one keyed pseudonym across files, and quarantines whatever it cannot clean.
 
-- **Few dependencies.** Python 3.10+; the rules use the standard library only. The learned
-  name check needs onnxruntime, sentencepiece and numpy (`requirements.txt`); without them
-  the firewall runs on its rules alone and the log says so.
+- **Few dependencies.** Python 3.10+; the rules use the standard library only. Encryption
+  needs `cryptography` (required: without it the firewall refuses to start). The learned
+  name check needs onnxruntime, sentencepiece and numpy; without them the firewall runs on
+  its rules alone and the log says so. All are in `requirements.txt`.
 - **One small model, declared below.** No LLM, nothing generative, nothing downloaded at
   run time.
 - **Deterministic.** Same input and `RAKSHA_SECRET` give byte-identical output.
@@ -58,6 +59,19 @@ make test-local PYTHON=.venv/bin/python
 make check                                        # organisers' pre-submit check
 ```
 
+### Encrypted input (optional)
+
+```bash
+RAKSHA_SECRET=... python3 tools/seal.py --in records/ --out sealed/       # or: make seal
+RAKSHA_SECRET=... python3 main.py --sealed sealed/ --output release/      # or: make run-sealed
+```
+
+The sealed folder shows neither contents nor file names, is decrypted in memory only, and
+gives the same `sanitized/` and `records.jsonl` as a plain run with the same secret.
+`--encrypt-quarantine` also keeps an encrypted copy of each quarantined file in
+`<output>/quarantine` (off by default); `tools/seal.py --open-quarantine` reads them back
+into a folder you choose.
+
 The output folder must not already contain a release. Exit codes: `0` release complete,
 `2` could not start (bad arguments, missing secret, bad policy), `1` unexpected failure.
 
@@ -96,7 +110,7 @@ invented patient through every stage below, showing the real output of each;
         |
    [ verify ]  stage, re-read, check structure; fail -> quarantine
         |
-   [ publish]  atomic renames, report last
+   [ publish]  decrypt audited files, rename into place, report last
         |
  output/  sanitized/   records.jsonl   report.json
 ```
@@ -140,11 +154,19 @@ run.
   run without it is refused.
 - Logs carry only counts, values from fixed lists, exception class names and digests
   (see "Run log").
-- No temporary files outside the output folder; only redacted bytes are ever written.
-  Input is opened read-only. Core dumps are disabled.
-- Raw values and the pseudonym map exist only in process memory, so there is no
-  intermediate file to encrypt and **no encryption at rest is implemented**. Keep input
-  and output on encrypted storage, and disable swap or encrypt it.
+- **Encryption at rest** (AES-256-GCM, `wards/crypto.py`). Files waiting for the audit in
+  `output/.stage` are on disk only as ciphertext, bound to their path, under a key that
+  exists only in the running process. Optional sealed input and quarantine use a data key
+  per file, wrapped by a key derived from `RAKSHA_SECRET` (HKDF and scrypt). No key is
+  written anywhere; keep the secret apart from the data.
+- **Threat covered:** a copy of the output folder taken at any moment of a run holds only
+  ciphertext and files that already passed the audit. The staging folder and half-written
+  files are removed on success, failure and stop signals; after a forced kill they remain
+  as ciphertext until the next run clears them.
+- **Not covered:** raw values and the pseudonym map exist in process memory during a run,
+  so disable swap or encrypt it (core dumps are disabled). A plain input folder is only
+  read; it stays as protected as the storage it is on unless you seal it.
+- No temporary files outside the output folder. Input is opened read-only.
 - A failure in one file quarantines that file. A failure in a dataset-wide stage (or
   `SIGTERM`, or an out-of-memory error) removes everything staged, writes a report marked
   `"status": "failed"` and exits non-zero. A forced kill cannot be handled; because

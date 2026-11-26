@@ -125,7 +125,15 @@ reproduced with new invented cases; that set is now tuned and was not used to me
 | T-106 | A patient's registered phone plus a compatible name links a note; two fitting patients: abstain | Same | No false merge | kept, as above |
 | T-107 | Records of one file that share a specimen or visit number, or name, age and sex, share a pseudonym and date shift; thin ties are not claimed in `records.jsonl` | Same | One shift per specimen; homonyms apart | kept, as above |
 
-## Questions to settle by measurement
+## Encryption at rest (Phase 20.1)
+
+| ID | Change to test | How to measure | Keep if | Status |
+|---|---|---|---|---|
+| T-108 | Stage files only as AES-GCM ciphertext; publish by decrypting audited files and renaming, report last; clean up on every exit | Inspect the stage during the audit; tamper and swap files; stop and kill the run | No plaintext staged; leftovers only ciphertext | kept |
+| T-109 | Optional sealed input with a data key per file and keyed file names | Sealed and plain runs on the same input; wrong secret; damaged folder | Identical release; nothing plain written | kept |
+| T-110 | Optional encrypted copy of quarantined files, off by default | Contents and names of the folder; opening it | Only the secret holder can read it | kept, off by default |
+
+
 
 | ID | Question | Why it matters | Status |
 |---|---|---|---|

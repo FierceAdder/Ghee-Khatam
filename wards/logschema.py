@@ -35,7 +35,7 @@ REASONS = frozenset({
     "fhir_faults_added", "format_changed", "self_scan_failed", "shape_changed",
     # anything else
     "processing_error", "run_failed", "terminated", "interrupted", "out_of_memory",
-    "other"})
+    "integrity_check_failed", "other"})
 
 # Every detector that can produce a mention (``Mention.source``). Unknown ones count as other.
 SOURCES = frozenset({
@@ -78,6 +78,7 @@ EVENTS: dict[str, tuple[str, dict]] = {
     "file_sources": (DETAIL, {"file": INT, **dict.fromkeys(SOURCES, INT)}),
     "log": (SUMMARY, {"dropped": INT, "overflow": INT}),
     "name_model": (SUMMARY, {"files_skipped": INT}),
+    "quarantine_encrypted": (SUMMARY, {"files": INT}),
     "seal": (SUMMARY, {"lines": INT, "report": HEX}),
 }
 

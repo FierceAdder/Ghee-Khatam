@@ -13,6 +13,7 @@ COPY main.py raksha.toml pyproject.toml ./
 COPY config ./config
 COPY resources ./resources
 COPY wards ./wards
+COPY tools/seal.py ./tools/seal.py
 
 # ---- tests and the development loop
 FROM base AS test

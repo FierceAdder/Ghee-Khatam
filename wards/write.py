@@ -85,9 +85,10 @@ def _materialize(node: object) -> object:
     return node
 
 
-def write_text_file(path: Path, content: str) -> None:
+def write_text_file(path: Path, content: str | bytes) -> None:
+    """Text is written as UTF-8. Bytes (staged ciphertext) are written as they are."""
     path.parent.mkdir(parents=True, exist_ok=True)
-    data = content.encode("utf-8", errors="replace")
+    data = content if isinstance(content, bytes) else content.encode("utf-8", errors="replace")
     with open(path, "wb") as handle:
         handle.write(data)
 
