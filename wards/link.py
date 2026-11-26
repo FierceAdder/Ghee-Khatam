@@ -30,7 +30,9 @@ PSEUDONYM_PREFIX = "PSN-"
 PSEUDONYM_LENGTH = 6
 
 # Order in which strong identifiers are applied: the most specific first.
-_STRONG_ORDER = ("aadhaar", "abha", "mrn", "ins", "pan", "email", "phone")
+# Hospital and insurance numbers share one kind: a label can call the same value either
+# ("Card No"), and the value, not the label, is what makes it unique.
+_STRONG_ORDER = ("aadhaar", "abha", "hid", "pan", "email", "phone")
 _NAME_WORD = re.compile(r"[A-Za-z]+(?:['’][A-Za-z]+)*|[\u0900-\u0963\u0971-\u097f]+")
 _DEVA_HONORIFICS = frozenset(TextView.of(w).text for w in HONORIFICS_DEVANAGARI)
 _RELATION_SEX = re.compile(r"(?i)(?<![A-Za-z/])(?P<r>[sdw])[ \t]*/[ \t]*o(?![A-Za-z])")
@@ -256,7 +258,7 @@ class Linker:
 
         groups = name_groups(summary.names)
         shapes: dict[str, set[str]] = defaultdict(set)
-        for value in summary.values("mrn"):
+        for value in summary.values("hid"):
             shapes[re.sub(r"\d", "#", value)].add(value)
         ambiguous = len(groups) > 1 or len(summary.values("aadhaar")) > 1 \
             or len(summary.values("abha")) > 1 or any(len(v) > 2 for v in shapes.values())
@@ -442,5 +444,5 @@ def _strong_key(mention: Mention) -> tuple[str, str] | None:
         declared = mention.source in ("field", "label")
         if len(key) < 6 or key.isdigit() and len(key) < 8 and not declared:
             return None
-        return ("mrn" if mention.etype is E.MRN else "ins"), key
+        return "hid", key
     return None

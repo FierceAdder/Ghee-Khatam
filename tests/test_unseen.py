@@ -81,6 +81,12 @@ def test_two_one_word_name_columns_are_one_name_in_parts(lexicon):
         == sorted([F.FIRST_NAME, F.LAST_NAME], key=str)
 
 
+def test_an_unrecognised_partner_of_a_name_part_is_the_other_part(lexicon):
+    rows = [["Longkumer", "Meren"], ["Kerketta", "Sunita"], ["Oraon", "Birsa"]]
+    assert type_columns(["Second Name", "First Name"], rows, lexicon) \
+        == [F.LAST_NAME, F.FIRST_NAME]
+
+
 def test_a_name_written_in_two_scripts_is_not_split(lexicon):
     rows = [["Sunita", "सुनीता"], ["Birsa", "बिरसा"]]
     assert F.LAST_NAME not in type_columns(["Name1", "Name2"], rows, lexicon)
@@ -120,6 +126,14 @@ def test_unfamiliar_keys_are_redacted_end_to_end(release):
     for row in rows:
         assert row["k1"] not in text and row["k2"] not in text and row["k3"] not in text
     assert text.count("Dengue fever") == len(rows)
+
+
+def test_a_number_labelled_as_insurance_still_links_to_the_same_hospital_number(release):
+    out = release({
+        "a.csv": "Card No,Patient Name,Mobile\nQXR/26/004411,Meren Longkumer,9812345670\n",
+        "b.csv": "UHID,Patient Name,Ward\nQXR/26/004411,Meren Longkumer,4\n"})
+    claims = out.claims()
+    assert claims[("a.csv", "row:0")] == claims[("b.csv", "row:0")] is not None
 
 
 # ---------------------------------------------------------- cues without lists

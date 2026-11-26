@@ -117,3 +117,54 @@ def test_altered_copies_never_overwrite_sources(monkeypatch, destination):
                                       "--toolkit", str(TOOLKIT)])
     with pytest.raises(SystemExit, match="refusing"):
         mutate.main()
+
+
+# ------------------------------------------------------------ scrambled labels
+
+
+@pytest.fixture(scope="module")
+def scrambled(tmp_path_factory):
+    import json
+
+    from scramble import Scrambler
+
+    truth = json.loads(TRUTH.read_text(encoding="utf-8"))
+    out = tmp_path_factory.mktemp("scrambled")
+    scrambler = Scrambler(truth, TRUTH.parent.parent / "input", 3, "cues")
+    scrambler.run(out)
+    return scrambler, out
+
+
+def test_a_scrambled_copy_has_an_exact_answer_key(scrambled):
+    from mutate import Mutator
+
+    scrambler, out = scrambled
+    assert len(scrambler.words) > 100
+    assert Mutator.unmatched(out)[1] > 2000 and Mutator.unmatched(out)[0] == 0
+
+
+def test_scrambling_keeps_identifiers_names_and_medicine(scrambled):
+    scrambler, _ = scrambled
+    text = "Patient Name: Meren Longkumer, UHID: IPD-2026-00461, Tab Paracetamol 650 mg"
+    out = scrambler.rewrite(text)
+    for kept in ("Meren Longkumer", "IPD-2026-00461", "Paracetamol 650 mg"):
+        assert kept in out
+    assert scrambler.rewrite(text) == out                     # the same every time
+
+
+def test_scrambled_words_are_new_words(scrambled):
+    from wards.lexicon import Lexicon
+
+    scrambler, _ = scrambled
+    lexicon = Lexicon.load()
+    fakes = list(scrambler.words.values())
+    assert len(set(fakes)) == len(fakes)
+    assert not any(lexicon.is_known_name(f) or lexicon.is_stopword(f) for f in fakes)
+
+
+def test_ablation_rejects_an_unknown_family():
+    from ablate import _patches
+
+    assert _patches("nothing") == []
+    with pytest.raises(SystemExit):
+        _patches("everything")

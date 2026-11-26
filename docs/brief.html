@@ -85,8 +85,9 @@ for every identifier, full name and address phrase detected in the input. Each f
 re-read and structure-checked; a failed run publishes no records and says so.</li>
 <li><b>Measured privacy.</b> Our replay of attacks A1–A7 and estimate of the utility formula
 decide each setting; ideas that cost more utility than they saved were dropped.</li>
-<li><b>Works from context and values.</b> With every name list removed, no personal data
-surfaced on the practice data or on our first altered copy.</li>
+<li><b>Works without name lists.</b> With every name list removed, no personal data surfaced
+on the practice data or our first altered copy. New names in scrambled wording still leak
+(2 of 4 canaries survived a stress test).</li>
 </ul>
 
 <div class="page2">
@@ -116,11 +117,11 @@ labels, date formats, encodings and folders, each with an exact answer key.</p>
 <tr><th>Run</th><th>Leaked</th><th>Medical kept</th><th>Linking P / R / F0.5</th></tr>
 <tr><td>Unfamiliar wording, first sight (before fixes)</td><td>7.4 % (Hindi 18.2 %, Hinglish 34.2 %), 1 canary</td><td>98.9 %</td><td>0.96 / 0.50 / 0.81</td></tr>
 <tr><td>Same copy and two more, after fixes (tuned)</td><td>0 %</td><td>99.2 %</td><td>1.00 / 0.99 / 1.00</td></tr>
-<tr><td><b>Held-out wording, first and only blind run</b></td><td>0 %, but birth year visible in 10 of 111 records</td><td>99.2 %</td><td>1.00 / 0.95 / 0.99</td></tr>
+<tr><td><b>Held-out wording (also ours), first run</b></td><td>0 %, but birth year visible in 10 of 111 records</td><td>99.2 %</td><td>1.00 / 0.95 / 0.99</td></tr>
 </table>
-<p>The blind run exposed one defect (a <code>D.O.B.</code> header read as “daughter of”), since
-fixed. The same author wrote the alterations and the fixes, and the copies reuse the practice
-layouts, so <b>expect worse than these figures on truly new formats</b>.</p>
+<p>That run exposed one defect (a <code>D.O.B.</code> header read as “daughter of”), since fixed.
+Some fixes added the reworded copy's own words, one author wrote all alterations and fixes, and
+every copy reuses the practice layouts, so <b>expect worse on truly new formats</b>.</p>
 
 <h2>6. Security design</h2>
 <ul>

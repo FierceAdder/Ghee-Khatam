@@ -344,7 +344,29 @@ class Mutator:
                     entity["key"] = entity["surface"].casefold()
             for probe in unit.get("preserve") or []:
                 probe["text"] = rewrite(probe["text"])
+        if spec["format"] in ("csv", "tsv", "json"):
+            self._rename_paths(entry, restyle)
         return entry
+
+    def _rename_paths(self, entry: dict, restyle: bool) -> None:
+        """Renamed headers and keys also rename record pointers and generalisable fields."""
+        def column(name: str) -> str:
+            name = self.header_map.get(name, name)
+            return name.replace("(MM/DD/YYYY)", "") if restyle else name
+
+        def pointer(loc: str) -> str:
+            if not loc.startswith("/"):
+                return loc
+            return "/".join(self.key_map.get(part, part) for part in loc.split("/"))
+
+        units = {}
+        for loc, unit in entry["units"].items():
+            unit["loc"] = pointer(unit.get("loc", loc))
+            units[pointer(loc)] = unit
+        entry["units"] = units
+        entry["generalizable"] = [
+            "col:" + column(g[4:]) if g.startswith("col:") else pointer(g)
+            for g in entry.get("generalizable") or []]
 
 
 def main() -> int:

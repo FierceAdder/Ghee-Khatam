@@ -183,6 +183,12 @@ pseudonym appears in its record.
 names, renamed headers, keys, labels and folders, other date formats and encodings.
 Levels are `easy`, `hard` and `holdout`.
 
+`scramble.py` replaces every header, key, label and (with `--tier cues`) honorific and
+relation word with made-up words, keeping names, identifiers and medical text, to measure
+how much detection depends on wording it knows. `ablate.py` switches off one family of
+evidence at a time and counts the leaks. Outside test records are collected as described in
+[docs/TEST_RECORDS_GUIDE.md](docs/TEST_RECORDS_GUIDE.md).
+
 Tests use invented names; those that need the practice kit are skipped without it. Design
 changes still to be tried are in [docs/CHANGES_TO_TEST.md](docs/CHANGES_TO_TEST.md).
 
@@ -190,7 +196,9 @@ changes still to be tried are in [docs/CHANGES_TO_TEST.md](docs/CHANGES_TO_TEST.
 
 - Rules were written while reading the practice data, and the altered copies reuse its
   document layouts. Results on really new formats will be worse than those above: the
-  first run on unfamiliar wording leaked 7.4 % before the fixes it prompted.
+  first run on unfamiliar wording leaked 7.4 % before the fixes it prompted, and some of
+  those fixes added that copy's own words. With labels scrambled on top of new names, names
+  that appear only once in free text still leak: 2 of 4 canaries survived (see SCORES.md).
 - A name in free text with no label, relation, honorific or similar context, that is in no
   gazetteer and appears nowhere else in the dataset, is missed.
 - All-lower-case names in prose are only found when another record already revealed them.

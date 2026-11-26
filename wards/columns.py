@@ -278,10 +278,21 @@ def _infer_single(cell: str, lexicon: Lexicon, context: Context) -> F | None:
     return None
 
 
+def _one_word(column: Sequence[str]) -> bool:
+    cells = [v.strip() for v in column if v.strip()]
+    return len(cells) >= 2 and sum(len(c.split()) == 1 for c in cells) >= 0.7 * len(cells)
+
+
 def _split_name_columns(types: list[F], columns: Sequence[Sequence[str]],
                         lexicon: Lexicon) -> None:
     """Two one-word name columns in the same script are one name in two parts."""
     names = [i for i, kind in enumerate(types) if kind is F.PATIENT_NAME]
+    # "First Name" recognised, its partner not: the partner is the other part
+    for known, partner in ((F.FIRST_NAME, F.LAST_NAME), (F.LAST_NAME, F.FIRST_NAME)):
+        if known in types and partner not in types and len(names) == 1 \
+                and _one_word(columns[names[0]]):
+            types[names[0]] = partner
+            return
     if len(names) != 2:
         return
     surname_share, scripts = [], set()

@@ -62,6 +62,11 @@ score would notice.
 | T-39 | Birth dates with no label anywhere in a patient's records | Altered notes | Detected without breaking visit dates | open |
 | T-3A | Type unfamiliar columns and JSON keys by what their values look like (identifiers, PIN, village, name, doctor, birth date) | Altered copies; medical values kept on practice data | Leaks and linking improve with no utility loss | kept, measured together with T-35: hard copy leaks 240 to 0 and linking recall 0.50 to 0.99; practice unchanged |
 | T-3B | Test value typing against columns it should leave alone (long date histories, capitalised category phrases) | Hand-made tables from other record systems | No clinical column is redacted | open |
+| T-3C | Scrambled-label test: replace every header, key, label and cue word with made-up words, keeping names, identifiers and medical text | `tools/scramble.py`, then `check_dev.py` | Used as a standing test that does not wear out | kept: practice 3 of 3230 leaked; scrambled hard copy 11, 2 of 4 canaries (SCORES.md) |
+| T-3D | Ablation: switch off one family of evidence at a time | `tools/ablate.py` on practice, scrambled and hard copies | Shows what protection rests on | kept: names reach detection by several routes; canaries depend on relation words and name lists |
+| T-3E | Recognise diagnoses for rare-condition suppression by value shape (ICD code beside a text), not by the key word "diagnosis" | Scrambled copies: suppressed codes and attack replay | All one-patient codes suppressed with labels scrambled | open: with labels scrambled most of the five codes were kept (Phase 14) |
+| T-3F | One identifier kind for hospital and insurance numbers in linking | Held-out copy, unit case | Recall rises, no false merges | kept: held-out recall 0.95 to 0.99, precision 1.00 |
+| T-3G | An unrecognised partner of a recognised name-part column is the other part | Unit cases, held-out copy | Rows stop looking like two people | kept |
 
 ## Linking (proposed changes 2 and 3)
 
@@ -96,5 +101,5 @@ The constraint-first union-find already exists. These refine it.
 | Q-01 | How much clinical utility does each rare-code rollup cost? | Sets how far T-12 can go | answered: about 0.01 of utility for the five one-patient codes |
 | Q-02 | How large are the hidden datasets compared with the roughly 240 MB where memory would run out? | Decides how urgent T-50 to T-52 are | open (ask organisers) |
 | Q-03 | Does the scorer inspect a leftover staging folder, and how does it treat a non-zero exit? | Decides failure behaviour | open (ask organisers) |
-| Q-04 | How much of the drop on unseen formats can label-free cues recover? | Ranks detection work | partly answered: with name lists removed nothing leaks on practice data or the hard copy. The effect of each cue on its own was not measured |
+| Q-04 | How much of the drop on unseen formats can label-free cues recover? | Ranks detection work | partly answered: scrambling labels and cues leaks 3 of 3230 on practice data and 11 (2 canaries) on the hard copy; the ablation gives each family's effect. Names that appear once in unfamiliar wording are the remaining gap |
 | Q-05 | How accurate is our attack replay compared with the real attacker? | Limits how far to trust privacy tuning | partly answered: matches on A4 and A5 for raw input; A2/A3 reads low |
