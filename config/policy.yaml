@@ -17,5 +17,5 @@ max_json_depth: 200        # deeper JSON is quarantined
 name_model: indicbert      # learned check for names no rule found: off | perceptron | crf | indicbert
 l_diversity: 0             # also widen bands until each (district, sex, band) group has this many diagnoses (0 = off)
 rare_diagnosis_mode: suppress  # a rare code becomes R69 (suppress), its ICD-10 category, or its chapter range
-age_partitioning: global   # global = one band width for everyone | mondrian = ranges per group of patients
+age_partitioning: mondrian # global = one band width for everyone | mondrian = ranges per group of patients
 name_matching: fuzzy       # fuzzy = also join name spellings that are nearly the same before linking

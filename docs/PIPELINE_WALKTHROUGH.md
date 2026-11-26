@@ -350,7 +350,7 @@ chained with an HMAC so that an edited log is detected (`tools/verify_log.py`). 
 lines, without timings, the chain fields and (except for the self-scan) zero counts:
 
 ```json
-{"event": "run_started", "files": 4, "policy": "74e036d5dc0b9067"}
+{"event": "run_started", "files": 4, "policy": "0324b7125c029d66"}
 {"event": "linking", "linked": 4, "merged_strong": 2, "patients": 2, "records": 4}
 {"age_band_years": 15, "event": "privacy", "patients": 2, "unique_band_sex_district": 2}
 {"event": "self_scan", "files_quarantined": 0, "files_repaired": 0, "records_withheld": 0, "repairs": 0}

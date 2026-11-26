@@ -127,9 +127,9 @@ run.
 | Relatives, phones, IDs, e-mail | typed tokens; numbers in JSON become `0` |
 | Staff other than doctors (nurses, technicians, pharmacists, ASHA and ANM workers) | `[STAFF]`, never used to link patients |
 | Dates | shifted by a per-patient offset of 1 to 180 days, in the original format |
-| Age | band of 5 to 15 years, chosen once per release from how crowded district-and-sex groups are; `90+` from 90 |
+| Age | a range shared by a group of patients with the same district and sex (Mondrian), at least as many as the privacy rule needs; patients in groups too small to split get a band of 5 to 15 years chosen from how crowded groups are; `90+` from 90 |
 | Rare diagnosis | a code held by one patient becomes `R69` and its names `[CONDITION]`, in every patient record; documents about no one keep it |
-| Options (off by default unless noted) | `l_diversity` widens bands until each group holds that many diagnoses; `rare_diagnosis_mode` can write the ICD-10 category or chapter instead of `R69` (measured worse); `age_partitioning: mondrian` gives each group of patients its own age range; `name_matching: fuzzy` (on) joins near-identical name spellings before linking; `name_model` adds a learned check for names no rule found (`perceptron`, `crf` or `indicbert`) |
+| Options (off by default unless noted) | `l_diversity` widens bands until each group holds that many diagnoses; `rare_diagnosis_mode` can write the ICD-10 category or chapter instead of `R69` (measured worse); `age_partitioning: mondrian` (on) gives each group of patients its own age range; `name_matching: fuzzy` (on) joins near-identical name spellings before linking; `name_model` adds a learned check for names no rule found (`perceptron`, `crf` or `indicbert`) |
 | Birth date | `[DOB]`; a FHIR `birthDate` is dropped. `dob_mode` can be `shift` or `year`, but both reveal the birth year. Under an unfamiliar header, dates spread over ten years or more are treated as birth dates |
 | Village / tehsil / PIN | district / `[TEHSIL]` / 3-digit prefix |
 | Medicines, doses, vitals, labs, diagnoses, doctors, wards | unchanged |

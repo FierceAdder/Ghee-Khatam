@@ -186,7 +186,7 @@ the log) for files beyond it. It needs onnxruntime, sentencepiece and numpy at r
 |---|---|---|---|
 | ICD-10 category or chapter instead of `R69` for one-patient codes | privacy | 38.97 against 39.37 (worst case 38.42 against 38.82) | rejected: the attacker treats a category or range as still matching |
 | l-diversity (2 or 3 diagnoses per district, sex and age-band group) | privacy | no change: bands are already at their widest on practice data | kept as an option, off |
-| Mondrian age ranges per group of patients | privacy | 3 secrets: 39.65 against 39.37; 10 secrets: see below | see below |
+| Mondrian age ranges per group of patients | privacy | 10 secrets: 39.63 against 39.46 (worst case 39.31 against 38.91) | kept, on |
 | Fuzzy spellings (Jaro-Winkler 0.95 on consonant skeletons) | linking | recall 0.95 to 0.96 and 0.99 to 1.00 on four validation sets, no false merges | kept, on |
 
 Scores vary noticeably with the secret: since Phase 9 changed the keys that seed each

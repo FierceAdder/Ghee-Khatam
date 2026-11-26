@@ -49,7 +49,7 @@ score would notice.
 | T-22 | Choose the age-band width from the data (groups by district and sex, assumed registry density) | Practice picks 15; unit cases with large populations pick 5 | Matches the measured best on practice and keeps narrow bands on large data | kept on practice; the large-data behaviour is untested against a real registry |
 | T-23 | Remove impossible ages (negative values in the data) instead of releasing them | Count them; check the utility estimate | The unique value is gone | kept: one such row in the practice data; costs one generalisation field |
 | T-24 | l-diversity over diagnoses in each (district, sex, age band) group | Attack replay, 3 secrets | Score rises | no change on practice data (bands already at their widest); kept as an option, off |
-| T-25 | Mondrian age ranges per group of patients instead of one band width | Attack replay, 3 then 10 secrets | Score rises under every attacker variant | pending the 10-secret run |
+| T-25 | Mondrian age ranges per group of patients instead of one band width | Attack replay, 3 then 10 secrets | Score rises under every attacker variant | kept: 10 secrets, 39.63 against 39.46 (worst case 39.31 against 38.91); all three attacks lower, utility 0.956 to 0.953 |
 
 ## Unseen formats and detection (proposed change 4)
 

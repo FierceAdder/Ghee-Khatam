@@ -75,8 +75,8 @@ two Aadhaar numbers, sexes, incompatible ages or given names. Devanagari and Lat
 share a phonetic key. When unsure the answer is <code>null</code>. Pseudonyms are
 HMAC-SHA256 under <code>RAKSHA_SECRET</code>.</li>
 <li><b>Privacy:</b> one keyed date shift per patient (up to 180 days), so intervals stay
-exact; birth dates removed; ages in bands of 5 to 15 years, chosen from how crowded
-district-and-sex groups are, 90+ top-coded; village to district; PIN to 3 digits; a diagnosis
+exact; birth dates removed; ages as ranges shared by groups of patients (Mondrian,
+chosen over 10 secrets of attack replay), 90+ top-coded; village to district; PIN to 3 digits; a diagnosis
 held by one patient is replaced everywhere in patient records.</li>
 </ul>
 
