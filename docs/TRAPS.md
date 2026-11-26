@@ -185,6 +185,40 @@ The generator builds each as a layout ingredient; several are held out for testi
 | R-04 | One date shift per patient | every date of a patient moves together, across files | P, U | tested |
 | R-05 | Ages near the top | `92` → `90+` | P | tested |
 
+## What the practice data contains (read 26 Nov 2026)
+
+About 30 document templates from four private hospitals and one district hospital, all in
+Uttar Pradesh: discharge summaries (English and Devanagari), short discharge notes, nursing
+notes, a visitor log, OPD prescriptions (English and Devanagari), WhatsApp lab forwards, lab
+reports (JSON) and lab result tables, OPD exports (JSON), registration tables (CSV, cp1252
+CSV, UTF-16 TSV, JSON), claims tables, FHIR bundles, and a set of broken or unsupported files.
+Names are mostly from the Hindi belt, with a few Punjabi, Muslim, South Indian and North-east
+names, mainly among canaries.
+
+Patterns seen there that the families above did not yet name:
+
+| ID | Pattern | Example shape (invented) | Family |
+|---|---|---|---|
+| S-01 | Hinglish possessive after a name | `Ramu bhai ki condition stable hai`, `Leela ji ka BP 130/80`, `Leela amma ki` | N-09 |
+| S-02 | Chat sender named by kinship | `[02/03/26, 9:10 pm] Kamal Chachu:` | N-12 |
+| S-03 | Relation that points the other way | `Attendant (S/o Ramu)`: the attendant is Ramu's son | N-10 |
+| S-04 | Two spellings of one name in one note | `Brijmohan ji` … `Brajmohan Yadav` | N-16 |
+| S-05 | One patient at two hospitals with two hospital numbers | `JKH-0012345` and `SMH/26/004411` | L, X-04 |
+| S-06 | Hospital number plus name as a column header | `time,KMC-0012 Leela,KMC-0013 Ramu` | H-03 |
+| S-07 | Index keyed by patient name | `{"by_name": {"Leela Oraon": "KMC-0012"}}` | H-02 |
+| S-08 | Name inside an export path in metadata | `"source_path": "D:\\exports\\Leela_Oraon_0012\\visits.json"` | H-07 |
+| S-09 | Witness name and phone inside a base64 attachment | consent form text encoded in base64 | H-04 |
+| S-10 | Caller in a free-text remark | `called by Leela Oraon 98765-01234` | N-05 |
+| S-11 | Date without a year | `Visit: 5 September` | T-03 |
+| S-12 | US-format dates in one hospital's files only | `03/23/2026` | T-03 |
+| S-13 | ICD code after K/C/O | `K/C/O: I10` | R-01 |
+| S-14 | Doctors shared across hospitals, sharing given names with relatives | `Dr. Ramu Saxena` and relative `Ramu Oraon` | N-01 |
+| S-15 | Upper-case names in lab tables | `LEELA ORAON` | N-16 |
+
+The generator reuses these on its training side; its test side adds the families and layouts
+above that the practice data does not contain (staff, regional forms, other ID types, the
+L-layouts, multi-patient records).
+
 ## Decisions and sources
 
 - **Staff (N-14):** removed as `[STAFF]` and never used for linking (decided 26 Nov 2026).

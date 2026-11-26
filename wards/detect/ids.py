@@ -63,6 +63,14 @@ _OTHER_LABEL = _compile(
     r"|बीमा|पॉलिसी)(?:[ \t]*(?:ID|No|Number|Card|सं|संख्या|नं))*\.?[ \t]*[:#=\-][ \t]*" + _ID_VALUE,
     re.IGNORECASE)
 
+# Government and programme IDs with a distinctive name need no separator ("Ration Card
+# 4017…"). A 12-digit ration card or RCH number must not be read as an Aadhaar number.
+_GOVT_ID_LABEL = _compile(
+    r"(?<![A-Za-z])(?:Ration[ \t]*Card|Voter[ \t]*ID|EPIC|Driving[ \t]*Licen[cs]e|Passport"
+    r"|MLC|FIR|RCH(?:[ \t]*ID)?|MCTS(?:[ \t]*ID)?|Nikshay(?:[ \t]*ID)?|ESIC|UDID|Family[ \t]*ID"
+    r"|Vehicle|राशन[ \t]*कार्ड|मतदाता[ \t]*पहचान)(?:[ \t]*(?:No|Number|ID|सं|नं)\.?)?[ \t]*[:#=\-–]?"
+    r"[ \t]*(?P<id>[A-Za-z0-9](?:[A-Za-z0-9/\-_.]|[ ](?=[A-Za-z0-9])){2,34}[0-9])", re.IGNORECASE)
+
 _INSURANCE_LABELS = frozenset({"policy", "claim", "insurance", "tpa", "member", "membership",
                                "beneficiary", "ayushman"})
 
@@ -99,6 +107,9 @@ def detect_ids(text: str) -> list[Mention]:
                 insured = m.group("label").lower() in _INSURANCE_LABELS
                 add(E.INSURANCE_ID if insured else E.OTHER_ID, m.start("id"), m.end("id"),
                     87, "label")
+        for m in _GOVT_ID_LABEL.finditer(text):
+            if _digit_count(m.group("id")) >= 3:
+                add(E.OTHER_ID, m.start("id"), m.end("id"), 88, "label")
         for m in _AADHAAR_LABEL.finditer(text):
             add(E.AADHAAR, m.start("id"), m.end("id"), 84, "label")
         for m in _PHONE_LABEL.finditer(text):

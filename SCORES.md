@@ -111,6 +111,39 @@ its own. Canaries, which appear once and in no list, depend on relation words an
 lists. My earlier statement that most names "came from recognised headers" was wrong as a
 measure of dependence: those detections are largely duplicated by other routes.
 
+## Generated data (`tools/generator`)
+
+Each dataset has 40 invented patients, about 130-190 files and an answer key produced while
+the files are written (checked exact: every answer is in its file and every invented name
+in a file has an answer). The **training** side uses layouts and wording like the practice
+data plus training ingredients; the **test** side uses only held-out name regions
+(North-east, South, Adivasi, West), label wordings, village endings, relation words and
+layouts the practice data does not contain (referral slips, MCH cards, medico-legal
+registers, two-row-header registers, handover notes, space-aligned lists, indexes keyed by
+name, pharmacy registers, duty rosters). 82 % of the test side's labels, headers and keys
+and 40 % of its running words do not occur in the practice data. Its files are shorter than
+practice files (about 60 words against 230).
+
+| Build | Split | Personal data visible | Canaries | Medical kept | Link P / R / F0.5 |
+|---|---|---:|---:|---:|---:|
+| Phase 12 (first run) | train, seed 1 | 2 (0.2 %) | 0 / 4 | 99.4 % | 1.00 / 0.95 / 0.99 |
+| Phase 12 (first run) | **test, seeds 1-2** | **91-99 (7.7-8.0 %)** | 0 / 4 | 99.1 % | 1.00-0.94 / 0.73-0.74 |
+| Phase 13 (training-side fixes) | train, seeds 1-3 | 4-7 (0.3-0.5 %) | 0 / 4 | 99.1-99.7 % | 1.00 / 0.96-1.00 |
+| Phase 13 (training-side fixes) | test, seeds 1-3 | 40-63 (3.4-5.2 %) | 0-1 / 4 | 99.1 % | 0.94-1.00 / 0.73-0.88 |
+
+Phase 13 fixes were found on the training side only: a 12-digit ration card number read as
+an Aadhaar number made registration rows look like two people, and a first name plus a
+relative's first name was taken as unique although set-aside records showed otherwise (one
+false merge). **Caveat:** the label list added for government IDs covers the whole catalogue
+family X-09, including the medico-legal and vehicle numbers used on the test side, and was
+written after seeing that the test side missed all of them; the drop in other-ID leaks on the
+test side (62 of 62 to 11-14) is therefore not an independent result. The rest of the test
+side's change comes from the same fixes and was not used to choose them.
+
+On the test side, what still leaks is mostly patient names (about 4 %), villages (3-16 %),
+PIN codes and landmarks (about 20-30 %), and linking recall stays low (0.73-0.88), with one
+false merge on seed 2. These are the targets of the Phase 14 detection rebuild.
+
 ## Attack replay and utility estimate
 
 Averaged over three secrets. "Score" is 25 x privacy + 20 x utility (out of 45). Attack

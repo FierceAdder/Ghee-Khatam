@@ -71,6 +71,8 @@ score would notice.
 | T-3F | One identifier kind for hospital and insurance numbers in linking | Held-out copy, unit case | Recall rises, no false merges | kept: held-out recall 0.95 to 0.99, precision 1.00 |
 | T-3G | An unrecognised partner of a recognised name-part column is the other part | Unit cases, held-out copy | Rows stop looking like two people | kept |
 | T-3H | Remove staff names (nurses, technicians, pharmacists, ASHA and ANM workers) as `[STAFF]`; keep doctors and role words; never link by them | Unit cases; practice and altered copies | Staff names gone, links and medical values unchanged | kept: practice and all copies unchanged (they name no staff); structured staff fields previously leaked |
+| T-3I | Labelled government and programme IDs (ration card, voter ID, RCH, MLC, vehicle…) are other IDs, never Aadhaar | Generated training side; unit cases | Rows stop looking like two people | kept: training linking recall 0.83-0.88 to 0.96-1.00. Test-side other-ID numbers are not independent (see SCORES.md) |
+| T-3J | Compositional generator with held-out ingredients (`tools/generator`) | Exact answer keys; coverage, novelty and realism reports | Used as the standing train/test benchmark | kept: test side leaks 3.4-5.2 % after Phase 13 |
 
 ## Linking (proposed changes 2 and 3)
 
@@ -81,7 +83,7 @@ The constraint-first union-find already exists. These refine it.
 | T-40 | Order candidate merges within a tier by evidence strength, then a stable key | Shuffle file order | Identical pseudonym groups | open |
 | T-41 | Explicit ABSTAIN outcome, recorded and counted | Count abstentions on homonym sets | No change to precision, decisions explainable | open |
 | T-42 | Require two agreeing clues to join two multi-record clusters on weak evidence | F0.5 on homonym-heavy copies | F0.5 rises | open |
-| T-43 | Check that a second clue is rare enough in the data before using it | Same | Fewer false merges, recall holds | open |
+| T-43 | Check that a second clue is rare enough in the data before using it | Same | Fewer false merges, recall holds | kept in part: a clue also carried by a set-aside record is not unique (removed a false merge on the training side) |
 | T-44 | Bridge-edge audit: cut the weakest bridge only when a cluster holds a conflict | Inject false links | Injected links are found | open |
 | T-45 | Versioned Hindi-Latin normaliser: ISO-15919-like transliteration and a larger alias table | Held-out spelling pairs and a homonym set | Cross-script recall rises, homonyms stay apart | open |
 | T-46 | Keyed tokens, one key domain per identifier type, for anything persisted | Inspect artefacts | No plaintext identifier is ever written | open |

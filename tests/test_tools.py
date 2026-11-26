@@ -197,3 +197,49 @@ def test_markdown_conversion():
     page = convert("# T\n\n| a | b |\n|---|---|\n| `x\\|y` | **z** |\n\n- one\n- two\n")
     assert "<h1>T</h1>" in page and "<td><code>x|y</code></td>" in page
     assert "<li>one</li><li>two</li>" in page and "<b>z</b>" in page
+
+
+# ------------------------------------------------------------------ generator
+
+
+@pytest.fixture(scope="module")
+def generator_module():
+    sys.path.insert(0, str(ROOT / "tools"))
+    from generator import build
+
+    return build
+
+
+@pytest.mark.parametrize("split", ["train", "test"])
+@pytest.mark.parametrize("seed", [1, 2, 3])
+def test_generated_answer_keys_are_exact(generator_module, split, seed):
+    world, docs = generator_module.build(split, seed, 20)
+    assert generator_module.missing(docs) == []
+    assert generator_module.untracked(world, docs) == []
+    assert sum(len(u.entities) for d in docs for u in d.units.values()) > 300
+
+
+@pytest.mark.parametrize("split", ["train", "test"])
+def test_generation_repeats_for_a_seed(generator_module, split):
+    first = [(d.rel, d.text) for d in generator_module.build(split, 4, 10)[1]]
+    assert [(d.rel, d.text) for d in generator_module.build(split, 4, 10)[1]] == first
+    assert [(d.rel, d.text) for d in generator_module.build(split, 5, 10)[1]] != first
+
+
+def test_test_ingredients_never_reach_the_training_side():
+    from generator import layouts, vocab
+
+    assert not set(vocab.TRAIN_REGIONS) & set(vocab.TEST_REGIONS)
+    for field, (train, test) in {**vocab.LABELS, **vocab.JSON_KEYS}.items():
+        assert not set(train) & set(test), field
+    for kind in (vocab.VILLAGE_ROOTS, vocab.VILLAGE_ENDINGS, vocab.TWO_WORD_VILLAGE):
+        assert not set(kind["train"].split()) & set(kind["test"].split())
+    test_only = {f for f in layouts.TEST["single"]} - set(layouts.TRAIN["single"])
+    assert test_only and not test_only & set(layouts.TRAIN["single"])
+
+
+def test_generated_people_come_from_their_side(generator_module):
+    from generator import vocab
+
+    world, _ = generator_module.build("test", 1, 20)
+    assert {p.region for p in world.patients + world.canaries} <= set(vocab.TEST_REGIONS)

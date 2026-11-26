@@ -235,6 +235,10 @@ how much detection depends on wording it knows. `ablate.py` switches off one fam
 evidence at a time and counts the leaks. Outside test records are collected as described in
 [docs/TEST_RECORDS_GUIDE.md](docs/TEST_RECORDS_GUIDE.md).
 
+`generator/build.py` writes invented datasets with exact answer keys: `--split train` is
+like the practice data, `--split test` uses only held-out name regions, wordings and layouts
+(docs/TRAPS.md). Fix what fails on the training side; measure on the test side.
+
 Tests use invented names; those that need the practice kit are skipped without it. Design
 changes still to be tried are in [docs/CHANGES_TO_TEST.md](docs/CHANGES_TO_TEST.md).
 

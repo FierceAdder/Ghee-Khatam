@@ -315,10 +315,12 @@ class Linker:
                           unanchored=sum(not e.anchored for e in evidence))
         clusters = Clusters(evidence)
         self._strong_tier(evidence, usable, clusters)
+        set_aside = [i for i in evidence_order
+                     if evidence[i].anchored and evidence[i].ambiguous]
         for name, tier in (("dob", self._name_dob_keys), ("relative", self._name_relative_keys),
                            ("village", self._name_village_keys),
                            ("given", self._given_relative_keys)):
-            self._unique_tier(evidence, usable, clusters, tier, name)
+            self._unique_tier(evidence, usable, clusters, tier, name, set_aside)
 
         members: dict[int, list[int]] = defaultdict(list)
         for index in usable:
@@ -361,12 +363,20 @@ class Linker:
                             self.stats["refused_" + refusal] += 1
                         representatives.append(i)
 
-    def _unique_tier(self, evidence, usable, clusters: Clusters, keys_of, name: str) -> None:
+    def _unique_tier(self, evidence, usable, clusters: Clusters, keys_of, name: str,
+                     set_aside: list[int] = ()) -> None:
         index: dict[tuple, list[int]] = defaultdict(list)
         for i in usable:
             for key in sorted(keys_of(clusters.summary[clusters.find(i)], evidence[i].summary)):
                 index[key].append(i)
+        # A clue is unique only if no other record carries it, including records set aside
+        # as describing several people: they still show that someone else has it.
+        elsewhere = {key for i in set_aside
+                     for key in keys_of(evidence[i].summary, evidence[i].summary)}
         for key in sorted(index):
+            if key in elsewhere:
+                self.stats["skipped_weak"] += 1
+                continue
             roots = sorted({clusters.find(i) for i in index[key]})
             if len(roots) < 2:
                 continue

@@ -313,3 +313,22 @@ def test_staff_are_removed_and_do_not_disturb_linking(release):
     claims = out.claims()
     assert claims[("note.txt", "doc")] == claims[("reg.csv", "row:0")] \
         == claims[("lab.json", "doc")] is not None
+
+
+@pytest.mark.parametrize("text, value", [
+    ("Ration Card 401785295299", "401785295299"), ("Voter ID ABC1234567", "ABC1234567"),
+    ("RCH ID: 123456789012", "123456789012"), ("EPIC no. XYZ7654321", "XYZ7654321")])
+def test_labelled_government_ids_are_not_aadhaar(detector, text, value):
+    found = [(m.etype, m.value) for m in detector.detect_segment(Segment(text, field=F.TEXT))]
+    assert found == [(E.OTHER_ID, value)]
+
+
+def test_a_clue_seen_in_a_set_aside_record_is_not_unique(release):
+    # two patients called Kulwant with a relative called Gurdeep; the register row holding
+    # the second is set aside (it carries two Aadhaar numbers), but it still counts
+    out = release({
+        "reg.csv": "UHID,Patient Name,Relation,Guardian,Aadhaar,Aadhaar 2\n"
+                   "QXR-0001,Kulwant Sidhu,S/o,Gurdeep Sidhu,4821 7365 9012,7391 4628 5510\n"
+                   "QXR-0002,Kulwant Brar,S/o,Gurdeep Brar,5821 7365 9013,\n",
+        "note.txt": "Kulwant, S/o Gurdeep, discharged in stable condition.\n"})
+    assert out.claims()[("note.txt", "doc")] is None
