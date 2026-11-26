@@ -2,4 +2,6 @@ my_output*/
 __pycache__/
 *.pyc
 .venv/
+.env
 .DS_Store
+.codegraph/
