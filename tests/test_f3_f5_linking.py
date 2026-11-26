@@ -156,6 +156,18 @@ def test_surname_that_fits_two_people_on_one_phone_is_not_guessed(release, note)
     assert linked(result) not in {patient_of(result, 0), patient_of(result, 1)}
 
 
+def test_a_note_still_links_when_one_persons_records_disagree(release):
+    """Two sets of records of one name cannot join (their ages differ); that is no reason
+    to leave a note with the same name and phone to a weaker clue, which picked a namesake."""
+    header = "uhid,patient_name,sex,age,mobile\n"
+    out = release({
+        "a.csv": header + f"KMC-2001,Devendra Chaurasia,M,30,{PHONE}\n",
+        "b.csv": header + f"KMC-2002,Devendra Chaurasia,M,61,{PHONE}\n",
+        "note.txt": f"Patient Name: Devendra Chaurasia\nPhone No: {PHONE}\nBP 120/80\n"})
+    claims = out.claims()
+    assert claims[("note.txt", "doc")] == claims[("a.csv", "row:0")] is not None
+
+
 def test_a_first_name_picks_one_of_two_people_on_a_family_phone(release):
     result = with_registry(
         release, PATIENT + f"KMC-1002,Phulmati Chaurasia,F,40,{PHONE}\n",

@@ -145,6 +145,13 @@ reproduced with new invented cases; that set is now tuned and was not used to me
 | T-83 | Remove hospital names from records | Targeted success with the hospital signal ignored | Success falls | rejected: success unchanged at 0.570 without the signal |
 | T-113 | Re-check the privacy settings on 500 invented patients and a 2,500-person register | `tools/scale_attack_data.py`, 10 secrets, rules only | Same settings still win | held: no alternative scored higher; risks are so low there that most settings tie |
 
+## Found on a blind dataset (Phase 22)
+
+| ID | Change to test | How to measure | Keep if | Status |
+|---|---|---|---|---|
+| T-114 | A note sharing a phone with several record sets is left aside only if they name different people (part of T-106) | New test with invented data; all fixed sets | No false merge anywhere | kept: the first blind run had one false merge from the earlier rule (precision 0.998, recall 0.534); after the fix 1.000 and 0.547; every other set unchanged |
+| T-115 | Remove a given name that is also an ordinary word (found as one name left visible on the blind set) | New remove/keep cases; fixed sets | Name removed, ordinary sentences unchanged | open |
+
 ## Questions to settle by measurement
 
 | ID | Question | Why it matters | Status |

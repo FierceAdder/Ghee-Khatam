@@ -556,11 +556,8 @@ class Linker:
                         if _is_note(evidence[i]) else 0, evidence[i].record.key))
                 representatives: list[int] = []
                 for i in group:
-                    if kind == "phone" and _is_note(evidence[i]) and 1 < len({
-                            clusters.find(other) for other in representatives
-                            if clusters.find(other) == clusters.find(i) or compatible(
-                                clusters.summary[clusters.find(i)],
-                                clusters.summary[clusters.find(other)])}):
+                    if kind == "phone" and _is_note(evidence[i]) \
+                            and self._torn(i, representatives, clusters):
                         torn.add(key[1])
                         continue        # "Verma ji" and two Vermas share the number
                     refusal = None
@@ -578,6 +575,18 @@ class Linker:
                             self.stats["refused_" + refusal] += 1
                         representatives.append(i)
         return hubs, torn
+
+    @staticmethod
+    def _torn(note: int, representatives: list[int], clusters: Clusters) -> bool:
+        """Could the note join patients with different names? Several record sets of one
+        name do not count: the note then joins the first, as for any shared identifier."""
+        mine = clusters.find(note)
+        fits = sorted({root for other in representatives for root in [clusters.find(other)]
+                       if root == mine
+                       or compatible(clusters.summary[mine], clusters.summary[root])})
+        names = sorted({n for root in fits for n in clusters.summary[root].names},
+                       key=_name_order)
+        return len(fits) > 1 and len(name_groups(names)) > 1
 
     def _unique_tier(self, evidence, usable, clusters: Clusters, keys_of, name: str,
                      set_aside: list[int] = ()) -> None:
