@@ -233,20 +233,25 @@ generated data only.
 
 ## Measured results
 
-Practice data, `check_dev.py` and our own tools, 26 Nov 2026. Not the official score.
+Practice data, `check_dev.py` and our own tools, 27 Nov 2026. Not the official score.
 
 | Measure | Value |
 |---|---|
 | Personal data still visible | 0 of 3,230 pieces (English, Hindi and Hinglish) |
 | Planted canaries found in the output | 0 of 4 |
-| Medical values kept | 99.0 % (five one-patient diagnoses removed on purpose; a few words taken for names by the learned check) |
+| Medical values kept | 99.1 % (five one-patient diagnoses removed on purpose) |
 | Linking precision / recall / F0.5 | 1.00 / 1.00 / 1.00 |
-| Intervals between a patient's events | 100 % exact |
-| Records still revealing a birth year | 0 of 111 |
-| Time, peak memory (200 files), Docker on 2 CPUs | 26.6 s, 334 MB (1.7 s and 67 MB without the learned check) |
-| 2,000 files, copies of the practice data, Docker on 2 CPUs | 30 s, 497 MB (repeated lines are scored once) |
-| Unique generated files, Docker on 2 CPUs | about 0.17 s per file |
+| Attack replay, relative to raw input (10 secrets) | direct 0, record linkage 0.25, profile 0.23, targeted 0.57 |
+| Time, peak memory (200 files), Docker on 2 CPUs | 12.2 s, 341 MB |
+| 2,000 files, copies of the practice data (measured at Phase 15) | 30 s, 497 MB |
 | Same secret twice; Docker against macOS | byte-identical output |
+
+On data not used for tuning:
+
+| Data | Leaked | Medical kept | Linking P / R |
+|---|---|---|---|
+| Held-out test seeds 7-9, run once | 1.4-1.9 %, no critical identifier, no canary | 99.1-100 % | 0.92-0.95 / 0.66-0.72, one false merge each |
+| Blind set, 2,419 files, first run | structured identifiers 0; one given name that is also a word left visible | medicines, doses, BP all; diagnoses 99.0 % | 0.998 / 0.534 (1.000 / 0.547 after fixing the false merge) |
 
 Altered copies, results on wording the first version had not seen, and the attack replay
 are in [SCORES.md](SCORES.md).
@@ -297,6 +302,10 @@ changes still to be tried are in [docs/CHANGES_TO_TEST.md](docs/CHANGES_TO_TEST.
   first run on unfamiliar wording leaked 7.4 % before the fixes it prompted, and some of
   those fixes added that copy's own words. With labels scrambled on top of new names, names
   that appear only once in free text still leak: 2 of 4 canaries survived (see SCORES.md).
+- **Linking on unfamiliar layouts is the weakest part:** each of the three final test sets has
+  one false merge, and recall there is 0.66 to 0.72.
+- A given name that is also an ordinary word can stay visible, even in a name column.
+- Names written all in capitals in free text are often missed.
 - A name in free text with no label, relation, honorific or similar context, that is in no
   gazetteer and appears nowhere else in the dataset, is missed unless the learned name check
   is on. With IndicBERT on, names leaked on the held-out test side fell from 7-14 to 0-1 per

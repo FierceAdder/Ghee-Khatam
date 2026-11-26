@@ -310,3 +310,48 @@ Existing outputs of the Phase 15 code, counts only: 57 of 3,582 pieces.
 All in Latin or Hinglish text content. None is a critical identifier (phone, Aadhaar, ABHA, PAN,
 hospital number, email or full patient name), so the order of work did not change.
 
+## Phase 22: final numbers
+
+### Reserved test seeds 7-9 (held-out ingredients, run once)
+
+Code of commit `1915340`; the one later change (T-114) leaves these results identical.
+
+| Seed | Files | Leaked | Names | Canaries | Medical kept | Link P / R | Wrong merges | Time, memory (Mac) |
+|---|---:|---|---:|---:|---|---|---:|---|
+| 7 | 137 | 25 of 1,317 (1.9 %) | 1 | 0 | 482 of 482 | 0.92 / 0.72 | 1 | 10 s, 333 MB |
+| 8 | 131 | 19 of 1,186 (1.6 %) | 0 | 0 | 422 of 426 | 0.95 / 0.66 | 1 | 9 s, 298 MB |
+| 9 | 133 | 17 of 1,203 (1.4 %) | 0 | 0 | 444 of 448 | 0.92 / 0.67 | 1 | 10 s, 300 MB |
+
+No critical identifier leaked: the rest are PIN codes, landmarks, other IDs, two villages and one
+partial name. **Each seed has one false merge.** The Phase 15 code, run on the same seeds for
+comparison, makes the same merges with the same precision and recall, leaks more (31, 27, 22)
+and keeps 482, 415 and 448 medical values (so seed 9 lost 4 since, seed 8 gained 7).
+
+### A blind dataset (2,419 files, 300 invented patients)
+
+Supplied by the team after Phase 16 was committed and run once before any change. It is
+templated, and its answer key holds only names and clinical facts, so identifiers were taken
+from its structured registration records and counted automatically; this is our scorer, not the
+official one.
+
+| Measure | First run |
+|---|---|
+| Time, peak memory | 30 s, 403 MB on the Mac; 31 s, 359 MB in Docker on 2 CPUs; identical output; all files within the model budget |
+| Contract, determinism, input | OK, identical over two runs, unchanged |
+| Aadhaar, ABHA, insurance IDs, hospital numbers, phones, PINs, villages, addresses, emails, full patient names | 0 visible |
+| Other automatic hits | 8 birth-date matches (equal dates in files without a birth-date column) and 1 doctor name equal to a relative's: no real leak among them |
+| **Real leak** | one given name that is also an ordinary word stays visible (about 180 value-in-file pieces) |
+| Medicines, doses, blood pressures | all kept |
+| Diagnoses; doctor names | 1,973 of 1,993; 194 of 200 |
+| Stay length in registration records | 1,200 of 1,200 preserved |
+| Linking | precision 0.998, recall 0.534, one false merge |
+
+The false merge came from a Phase 15.5 rule (the Phase 15 code makes none, at recall 0.547).
+After the fix (T-114) precision is 1.000 and recall 0.547; this second figure is tuned on this
+set. The low recall has a visible cause: the set's ages do not agree with its visit years, so
+linking refuses merges on age. The given-name leak is open (T-115).
+
+### Practice data, final code
+
+0 of 3,230 pieces visible, 0 of 4 canaries, medical values kept 4,810 of 4,855 (99.1 %), linking
+1.00 / 1.00, 12.2 s and 341 MB in Docker on 2 CPUs, byte-identical with macOS; 1,084 tests pass.
