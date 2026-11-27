@@ -1,3 +1,0 @@
-VISITOR LOG
-18:40 - [RELATIVE] (attendant, bed 12), mob [PHONE]
-19:10 - Dr. Ramesh Srivastava took evening round.
