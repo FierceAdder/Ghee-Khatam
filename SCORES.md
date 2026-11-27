@@ -355,3 +355,12 @@ linking refuses merges on age. The given-name leak is open (T-115).
 
 0 of 3,230 pieces visible, 0 of 4 canaries, medical values kept 4,810 of 4,855 (99.1 %), linking
 1.00 / 1.00, 12.2 s and 341 MB in Docker on 2 CPUs, byte-identical with macOS; 1,084 tests pass.
+
+## Five fixes from a second outside set (27 Nov 2026)
+
+Separators inside hospital numbers, doctors' degrees, medicines after a dosage form, names in
+relation objects and patient-name keys (T-116 to T-120), each tested with new invented data.
+All 15 fixed practice, altered and training-generator sets give the same counts as before:
+practice data 0 of 3,230 visible, 0 canaries, 4,810 of 4,855 medical values, linking 1.00 /
+1.00. The fixes therefore show no measured gain or loss on those sets. The outside set was not
+run again, and the held-out seeds and the blind set were not re-measured. 1,212 tests pass.

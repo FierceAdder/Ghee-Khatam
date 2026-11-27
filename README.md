@@ -297,6 +297,12 @@ changes still to be tried are in [docs/CHANGES_TO_TEST.md](docs/CHANGES_TO_TEST.
 
 ## Known limitations
 
+- **Not built:** Phases 17-19 (further linking work, a runtime swap test and the open detection
+  items) were planned and are not implemented.
+- A second outside test set showed five defects (separators inside hospital numbers, a doctor's
+  degree replaced, unlisted medicine names removed, names in relation objects, patient-name
+  keys). They are fixed and tested with new invented data; that set was not run again, and the
+  held-out and blind-set figures above were measured before these fixes.
 - Rules were written while reading the practice data, and the altered copies reuse its
   document layouts. Results on really new formats will be worse than those above: the
   first run on unfamiliar wording leaked 7.4 % before the fixes it prompted, and some of
