@@ -1,0 +1,23 @@
+Sanjeevani Multispeciality Hospital, Lucknow
+डिस्चार्ज सारांश
+
+मरीज़ का नाम: PSN-PGVK29    आयु: 29-76 वर्ष / पुरुष
+पिता का नाम: [RELATIVE]
+पंजीकरण सं.: [ID]    आईपीडी सं.: [ID]
+पता: [HOUSE], [LANDMARK], ग्राम लखनऊ, तहसील [TEHSIL], जिला लखनऊ - 226***
+मोबाइल: [PHONE]
+भर्ती की तारीख: 19/10/2026
+छुट्टी की तारीख: 29/10/2026
+
+निदान: उच्च रक्तचाप (I10); किडनी की पुरानी बीमारी (N18.3); दस्त और उल्टी (A09); 
+मरीज़ को 7 दिन से बुखार था। BP 147/93, Pulse 90/min।
+
+Medications on discharge:
+ 1. Tab Amlodipine 5 mg 0-0-1 x 15 days
+ 2. Tab Telmisartan 40 mg 1-0-0 x 15 days
+ 3. Tab Ramipril 5 mg 0-0-1 x 30 days
+ 4. Sachet ORS 1 sachet after each loose stool x 15 days
+ 5. Tab Pantoprazole 40 mg 1-0-0 x 30 days
+
+Advice: Low salt, diabetic diet. Review in OPD after 2 weeks with Dr. Vandana Kulshrestha.
+Attendant: [RELATIVE], Mob. [PHONE]

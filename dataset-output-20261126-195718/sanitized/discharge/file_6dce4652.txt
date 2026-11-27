@@ -1,0 +1,29 @@
+District Hospital Hardoi, Hardoi
+डिस्चार्ज सारांश
+
+मरीज़ का नाम: PSN-4TYT38    आयु: 50-59 वर्ष / महिला
+पिता का नाम: [RELATIVE]
+पंजीकरण सं.: [ID]    आईपीडी सं.: [ID]
+पता: [HOUSE], [LOCALITY], ग्राम हरदोई, तहसील [TEHSIL], जिला हरदोई - 241***
+मोबाइल: [PHONE]
+भर्ती की तारीख: 10.01.2027
+छुट्टी की तारीख: 14.01.2027
+
+निदान: निमोनिया (J18.9); मलेरिया (B54); 
+मरीज़ को 8 दिन से बुखार था। BP 133/69, Pulse 79/min।
+
+Medications on discharge:
+ 1. Tab Azithromycin 500 mg 1-0-0 x 30 days
+ 2. Tab Paracetamol 650 mg 1-1-1 x 15 days
+ 3. Tab Artesunate 100 mg 1-0-1 x 15 days
+ 4. Tab Pantoprazole 40 mg 1-0-0 x 15 days
+ 5. Tab Ramipril 5 mg 0-0-1 x 15 days
+
+Address (attendant): C/O [RELATIVE], [LOCALITY]
+OPD: C/O fever for 8 days
+Ward: 4 (Medicine)
+Medicine: Ramipril 5 mg
+Dr. Ramesh Srivastava reviewed the patient.
+
+Advice: Low salt, diabetic diet. Review in OPD after 2 weeks with Dr. Ramesh Srivastava.
+Attendant: [RELATIVE], Mob. [PHONE]

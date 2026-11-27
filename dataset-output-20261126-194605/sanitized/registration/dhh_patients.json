@@ -1,0 +1,43 @@
+{
+  "facility": {
+    "name": "District Hospital Hardoi",
+    "type": "District Hospital",
+    "state": "UP"
+  },
+  "exported_at": "2026-11-20T08:15:00+05:30",
+  "schema": "dhh.registration.v3",
+  "patients": [
+    {
+      "uhid": "[ID]",
+      "name": {
+        "first": "PSN-1378QK",
+        "last": "PSN-1378QK",
+        "local": "PSN-1378QK"
+      },
+      "gender": "female",
+      "dob": "[DOB]",
+      "age": "50-59",
+      "guardian": {
+        "relation": "D/o",
+        "name": "[RELATIVE]"
+      },
+      "contact": {
+        "mobile": "[PHONE]",
+        "email": null
+      },
+      "address": {
+        "line": "[HOUSE], [LOCALITY], [LOCALITY], [LANDMARK], Tehsil [TEHSIL], Distt. Hardoi",
+        "village": "Hardoi",
+        "tehsil": "[TEHSIL]",
+        "district": "Hardoi",
+        "pin": "241***"
+      },
+      "ids": {
+        "aadhar_no": 0,
+        "abha": null,
+        "abha_address": null
+      },
+      "registered_on": "2024-03-02"
+    }
+  ]
+}

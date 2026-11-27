@@ -1,0 +1,10 @@
+bill_no,uhid,patient_name,pmjay_id,payer_pan,policy_no,package_code,procedure,admission_date,discharge_date,amount_inr,status
+BL/26/000248,[ID],PSN-P2HSGK,[ID],[PAN],,MG006A,Caesarean section,15/02/2027,17/02/2027,49500,approved
+BL/26/000249,[ID],PSN-8VXEPF,,[PAN],[ID],MG006A,Caesarean section,21/09/2025,01/10/2025,92500,pending
+BL/26/000250,[ID],PSN-EEAQCF,[ID],[PAN],,SE001A,Cataract surgery (phacoemulsification),20/02/2027,02/03/2027,15000,pending
+BL/26/000251,[ID],PSN-9S08NG,,[PAN],[ID],MG064A,Haemodialysis session,08/06/2026,17/06/2026,32000,approved
+BL/26/000252,[ID],PSN-H2RAFQ,[ID],[PAN],,SG039B,Laparoscopic cholecystectomy,04/07/2026,13/07/2026,68500,approved
+BL/26/000253,[ID],PSN-B63DQW,[ID],[PAN],,MG006A,Caesarean section,15/05/2026,25/05/2026,14500,approved
+BL/26/000254,[ID],PSN-V7VT99,[ID],[PAN],,SN045A,Deep brain stimulation,02/11/2026,07/11/2026,55500,approved
+BL/26/000255,[ID],PSN-8DT6QH,[ID],[PAN],,SG001A,Appendicectomy,21/05/2026,02/06/2026,47500,approved
+BL/26/000256,[ID],PSN-PGVK29,,[PAN],[ID],MG064A,Haemodialysis session,19/10/2026,29/10/2026,56000,approved

@@ -1,0 +1,4 @@
+{"error":"KeyboardInterrupt","event":"problem","mac":"b6ccd06bf19f00179a8a61b02fdd8d72","reason":"interrupted","seq":0,"stage":"run","t":8.84}
+{"event":"run_finished","files_quarantined":111,"files_sanitized":0,"files_total":111,"mac":"6ed2fd9cdd911d8b79b571cff60daedf","peak_rss_mb":197.8,"records_linked":0,"records_processed":0,"records_quarantined":0,"seconds":3.77,"seq":1,"status":"failed","t":8.84}
+{"dropped":0,"event":"log","mac":"4f3cb932db4e4ce2455da97ac58f24ea","overflow":0,"seq":2}
+{"event":"seal","lines":3,"mac":"9757429914146eb3ecd0668beae4f893","report":"1bf0d2fd3f22d45c28c6e2e2f97a1a61ed1f8f274e13aa588773e18fc4c59e96","seq":3}

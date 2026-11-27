@@ -1,0 +1,29 @@
+DISCHARGE SUMMARY | Sanjeevani Multispeciality Hospital
+Patient: Diya PSN-EV1KKH | UHID: [ID]
+Guardian / W/o: [RELATIVE] | DOB: [DOB] | Age: 20-29
+Address: [HOUSE], Rae Bareli, Sitapur - 261***
+Mobile: [PHONE] | Aadhaar: [AADHAAR] | ABHA: [ABHA]
+Admission: 24-04-2026 09:00 | Discharge: 24-04-2026 17:00
+Diagnosis: K50.9 - Crohn's disease, unspecified
+Treatment: Metformin 500 mg, 1-0-1, BD x 5 days.
+Vitals: BP 118/76 mmHg; HR 72 bpm; SpO2 98%; Na 140 mmol/L; Hb 12.4 g/dL.
+Follow-up in 14 days. Doctor: Dr. Ramesh Srivastava.
+Longitudinal observations (synthetic):
+Observation 01: BP 90/60 mmHg; HR 0 bpm; temperature 39.4 C; SpO2 72%; glucose hemolyzed mmol/L; sodium 0 mmol/L; assessment Essential (primary) hypertension; status repeat requested.
+Observation 02: BP 0/0 mmHg; HR 198 bpm; temperature -1.0 C; SpO2 100%; glucose -1 mmol/L; sodium 190 mmol/L; assessment Pneumonia, unspecified organism; status instrument error.
+Observation 03: BP not recorded mmHg; HR NA bpm; temperature NA C; SpO2 NA%; glucose 33.3 mmol/L; sodium NA mmol/L; assessment Crohn's disease, unspecified; status follow-up advised.
+Observation 04: BP 120/80 mmHg; HR 72 bpm; temperature 36.8 C; SpO2 98%; glucose 5.6 mmol/L; sodium 140 mmol/L; assessment Chest pain, unspecified; status stable.
+Observation 05: BP 90/60 mmHg; HR 0 bpm; temperature 39.4 C; SpO2 72%; glucose hemolyzed mmol/L; sodium 0 mmol/L; assessment Epilepsy, unspecified, not intractable; status repeat requested.
+Observation 06: BP 0/0 mmHg; HR 198 bpm; temperature -1.0 C; SpO2 100%; glucose -1 mmol/L; sodium 190 mmol/L; assessment Infectious gastroenteritis and colitis; status instrument error.
+Observation 07: BP not recorded mmHg; HR NA bpm; temperature NA C; SpO2 NA%; glucose 33.3 mmol/L; sodium NA mmol/L; assessment Low back pain; status follow-up advised.
+Observation 08: BP 120/80 mmHg; HR 72 bpm; temperature 36.8 C; SpO2 98%; glucose 5.6 mmol/L; sodium 140 mmol/L; assessment Type 2 diabetes mellitus without complications; status stable.
+Observation 09: BP 90/60 mmHg; HR 0 bpm; temperature 39.4 C; SpO2 72%; glucose hemolyzed mmol/L; sodium 0 mmol/L; assessment Essential (primary) hypertension; status repeat requested.
+Observation 10: BP 0/0 mmHg; HR 198 bpm; temperature -1.0 C; SpO2 100%; glucose -1 mmol/L; sodium 190 mmol/L; assessment Pneumonia, unspecified organism; status instrument error.
+Observation 11: BP not recorded mmHg; HR NA bpm; temperature NA C; SpO2 NA%; glucose 33.3 mmol/L; sodium NA mmol/L; assessment Crohn's disease, unspecified; status follow-up advised.
+Observation 12: BP 120/80 mmHg; HR 72 bpm; temperature 36.8 C; SpO2 98%; glucose 5.6 mmol/L; sodium 140 mmol/L; assessment Chest pain, unspecified; status stable.
+Observation 13: BP 90/60 mmHg; HR 0 bpm; temperature 39.4 C; SpO2 72%; glucose hemolyzed mmol/L; sodium 0 mmol/L; assessment Epilepsy, unspecified, not intractable; status repeat requested.
+Observation 14: BP 0/0 mmHg; HR 198 bpm; temperature -1.0 C; SpO2 100%; glucose -1 mmol/L; sodium 190 mmol/L; assessment Infectious gastroenteritis and colitis; status instrument error.
+Observation 15: BP not recorded mmHg; HR NA bpm; temperature NA C; SpO2 NA%; glucose 33.3 mmol/L; sodium NA mmol/L; assessment Low back pain; status follow-up advised.
+Observation 16: BP 120/80 mmHg; HR 72 bpm; temperature 36.8 C; SpO2 98%; glucose 5.6 mmol/L; sodium 140 mmol/L; assessment Type 2 diabetes mellitus without complications; status stable.
+Observation 17: BP 90/60 mmHg; HR 0 bpm; temperature 39.4 C; SpO2 72%; glucose hemolyzed mmol/L; sodium 0 mmol/L; assessment Essential (primary) hypertension; status repeat requested.
+Observation 18: BP 0/0 mmHg; HR 198 bpm; temperature -1.0 C; SpO2 100%; glucose -1 mmol/L; sodium 190 mmol/L; assessment Pneumonia, unspecified organism; status instrument error.

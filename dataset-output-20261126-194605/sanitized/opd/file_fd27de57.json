@@ -1,0 +1,70 @@
+{
+  "_export_meta": {
+    "system": "eHospital",
+    "hospital": "Arogya Seva Sadan",
+    "generated_at": "2026-07-07T18:00:00+05:30",
+    "source_path": "batch/opd.json"
+  },
+  "visits": [
+    {
+      "visit_id": "OPX-0000039",
+      "patient_ref": "[ID]",
+      "patientName": "PSN-WZK2F7",
+      "guardian": "[RELATIVE]",
+      "phone_no": "[PHONE]",
+      "aadhaar_number": "[AADHAAR]",
+      "abha_number": "[ABHA]",
+      "email": null,
+      "visit_date": "2026-10-16",
+      "date_of_birth": "[DOB]",
+      "dob_as_printed": "[DOB]",
+      "age": "10-19",
+      "address": "[HOUSE], लखनऊ, उन्नाव 209***",
+      "clinical_history": [
+        "Observation 01: BP not recorded mmHg; HR NA bpm; temperature NA C; SpO2 NA%; glucose 33.3 mmol/L; sodium NA mmol/L; assessment Low back pain; status follow-up advised.",
+        "Observation 02: BP 120/80 mmHg; HR 72 bpm; temperature 36.8 C; SpO2 98%; glucose 5.6 mmol/L; sodium 140 mmol/L; assessment Type 2 diabetes mellitus without complications; status stable.",
+        "Observation 03: BP 90/60 mmHg; HR 0 bpm; temperature 39.4 C; SpO2 72%; glucose hemolyzed mmol/L; sodium 0 mmol/L; assessment Essential (primary) hypertension; status repeat requested.",
+        "Observation 04: BP 0/0 mmHg; HR 198 bpm; temperature -1.0 C; SpO2 100%; glucose -1 mmol/L; sodium 190 mmol/L; assessment Pneumonia, unspecified organism; status instrument error.",
+        "Observation 05: BP not recorded mmHg; HR NA bpm; temperature NA C; SpO2 NA%; glucose 33.3 mmol/L; sodium NA mmol/L; assessment Crohn's disease, unspecified; status follow-up advised.",
+        "Observation 06: BP 120/80 mmHg; HR 72 bpm; temperature 36.8 C; SpO2 98%; glucose 5.6 mmol/L; sodium 140 mmol/L; assessment Chest pain, unspecified; status stable.",
+        "Observation 07: BP 90/60 mmHg; HR 0 bpm; temperature 39.4 C; SpO2 72%; glucose hemolyzed mmol/L; sodium 0 mmol/L; assessment Epilepsy, unspecified, not intractable; status repeat requested.",
+        "Observation 08: BP 0/0 mmHg; HR 198 bpm; temperature -1.0 C; SpO2 100%; glucose -1 mmol/L; sodium 190 mmol/L; assessment Infectious gastroenteritis and colitis; status instrument error.",
+        "Observation 09: BP not recorded mmHg; HR NA bpm; temperature NA C; SpO2 NA%; glucose 33.3 mmol/L; sodium NA mmol/L; assessment Low back pain; status follow-up advised.",
+        "Observation 10: BP 120/80 mmHg; HR 72 bpm; temperature 36.8 C; SpO2 98%; glucose 5.6 mmol/L; sodium 140 mmol/L; assessment Type 2 diabetes mellitus without complications; status stable.",
+        "Observation 11: BP 90/60 mmHg; HR 0 bpm; temperature 39.4 C; SpO2 72%; glucose hemolyzed mmol/L; sodium 0 mmol/L; assessment Essential (primary) hypertension; status repeat requested.",
+        "Observation 12: BP 0/0 mmHg; HR 198 bpm; temperature -1.0 C; SpO2 100%; glucose -1 mmol/L; sodium 190 mmol/L; assessment Pneumonia, unspecified organism; status instrument error.",
+        "Observation 13: BP not recorded mmHg; HR NA bpm; temperature NA C; SpO2 NA%; glucose 33.3 mmol/L; sodium NA mmol/L; assessment Crohn's disease, unspecified; status follow-up advised.",
+        "Observation 14: BP 120/80 mmHg; HR 72 bpm; temperature 36.8 C; SpO2 98%; glucose 5.6 mmol/L; sodium 140 mmol/L; assessment Chest pain, unspecified; status stable.",
+        "Observation 15: BP 90/60 mmHg; HR 0 bpm; temperature 39.4 C; SpO2 72%; glucose hemolyzed mmol/L; sodium 0 mmol/L; assessment Epilepsy, unspecified, not intractable; status repeat requested.",
+        "Observation 16: BP 0/0 mmHg; HR 198 bpm; temperature -1.0 C; SpO2 100%; glucose -1 mmol/L; sodium 190 mmol/L; assessment Infectious gastroenteritis and colitis; status instrument error.",
+        "Observation 17: BP not recorded mmHg; HR NA bpm; temperature NA C; SpO2 NA%; glucose 33.3 mmol/L; sodium NA mmol/L; assessment Low back pain; status follow-up advised.",
+        "Observation 18: BP 120/80 mmHg; HR 72 bpm; temperature 36.8 C; SpO2 98%; glucose 5.6 mmol/L; sodium 140 mmol/L; assessment Type 2 diabetes mellitus without complications; status stable."
+      ],
+      "department": "Psychiatry",
+      "doctor": "Dr. Arjun Yadav",
+      "complaints": "C/O severe abdominal pain x 7 days",
+      "vitals": {
+        "bp": "not recorded",
+        "pulse": null,
+        "temp_c": null,
+        "spo2": null,
+        "weight_kg": null
+      },
+      "diagnosis": [
+        {
+          "code": "M54.5",
+          "display": "Low back pain"
+        }
+      ],
+      "prescription": [
+        {
+          "drug": "Amoxicillin",
+          "strength": "500 mg",
+          "frequency": "1-1-1",
+          "duration": "BD x 5 days"
+        }
+      ],
+      "notes": "PSN-WZK2F7 ji ko follow-up; C/O nausea x 2 d. Keep diagnosis and dose intact."
+    }
+  ]
+}

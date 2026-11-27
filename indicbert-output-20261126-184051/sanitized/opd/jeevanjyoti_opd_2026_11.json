@@ -1,0 +1,94 @@
+{
+  "_export_meta": {
+    "system": "eHospital OPD module",
+    "hospital": "Jeevan Jyoti Charitable Hospital",
+    "exported_by": "opd.records.clerk",
+    "generated_at": "2026-11-28T18:00:00+05:30"
+  },
+  "visits": [
+    {
+      "visit_id": "OPD/26/11/00149",
+      "patient_ref": "[ID]",
+      "visit_date": "05-05-2026",
+      "department": "Medicine",
+      "doctor": "Dr. Vandana Kulshrestha",
+      "complaints": "kamzori 7 hafte se",
+      "history": "H/O snake bite 7 yrs back",
+      "vitals": {
+        "bp": "111/75",
+        "pulse": 116,
+        "temp_f": 98.2,
+        "spo2": 98,
+        "weight_kg": 88
+      },
+      "diagnosis": [
+        {
+          "code": "E03.9",
+          "display": "Hypothyroidism, unspecified"
+        }
+      ],
+      "rx": [
+        {
+          "drug": "Levothyroxine",
+          "strength": "50 mcg",
+          "frequency": "1-0-0",
+          "duration": "30 days"
+        }
+      ],
+      "notes": "PSN-DPX5B9 ka BP 111/75, ulti band ho gayi. Review after 2 weeks.",
+      "patient": {
+        "name": "PSN-DPX5B9",
+        "age_sex": "54-72/M",
+        "mobile": "[PHONE]"
+      }
+    },
+    {
+      "visit_id": "OPD/26/11/00150",
+      "patient_ref": "[ID]",
+      "visit_date": "02-11-2026",
+      "department": "Medicine",
+      "doctor": "Dr. Vandana Kulshrestha",
+      "complaints": "saans phoolna 3 hafte se",
+      "history": "No H/O DM/HTN",
+      "vitals": {
+        "bp": "105/70",
+        "pulse": 86,
+        "temp_f": 98.8,
+        "spo2": 92,
+        "weight_kg": 91
+      },
+      "diagnosis": [
+        {
+          "code": "E11.9",
+          "display": "Type 2 diabetes mellitus without complications"
+        }
+      ],
+      "rx": [
+        {
+          "drug": "Metformin",
+          "strength": "500 mg",
+          "frequency": "1-0-1",
+          "duration": "7 days"
+        },
+        {
+          "drug": "Glimepiride",
+          "strength": "1 mg",
+          "frequency": "1-0-0",
+          "duration": "14 days"
+        },
+        {
+          "drug": "Pantoprazole",
+          "strength": "40 mg",
+          "frequency": "1-0-0",
+          "duration": "7 days"
+        }
+      ],
+      "notes": "PSN-ESM2C8 ka BP 105/70, ulti band ho gayi. Review after 2 weeks.",
+      "patient": {
+        "name": "PSN-ESM2C8",
+        "age_sex": "26-44/M",
+        "mobile": "[PHONE]"
+      }
+    }
+  ]
+}

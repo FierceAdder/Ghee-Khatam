@@ -226,3 +226,63 @@ values are relative to the same attack on the raw input.
 A single run at Phase 8 with the secret `practice` gave A5 0.53, so the targeted attack
 depends noticeably on the date shifts. A1, A6 and A7 were 0 in that run. The medical
 values no longer kept since Phase 7 are the five one-patient diagnoses, removed on purpose.
+
+## Dataset run: 600 files (`dataset/`), Phase 15 configuration
+
+Output `Ghee-Khatam/dataset-output-20261126-195718`, run 2026-11-26. Secret not recorded.
+The dataset has 128 patients, 1,369 records and 600 files, including the chaos cases
+(encodings, FHIR, PII in keys, file names and base64, malformed files). This is the first
+run of this dataset in this log, so no number here has been tuned against it.
+
+| Measure | Practice (Phase 15) | Dataset (600 files) |
+|---|---:|---:|
+| Personal data visible | 0 / 3,230 | 141.5 / 7,272 (1.9 %) |
+| Patient names | 0 | 32 / 1,514 (2.1 %) |
+| Relative names | 0 | 21.5 / 728 (3.0 %) |
+| PIN codes | not listed | 60 / 572 (10.5 %) |
+| All other identifier types | 0 | 0 |
+| Canaries | 0 / 4 | 28 / 38 pieces (73.7 %) |
+| Medical values kept | 99.0 % | 96.4 % (of 11,496) |
+| Medication kept | not listed | 76.6 % |
+| Diagnoses kept | not listed | 85.2 % |
+| Linking precision / recall | 1.00 / 1.00 | 1.00 / 0.98 (30 patients split or null) |
+| Single date offset per patient | all | 126 / 128; 99.6 % of 15,927 intervals exact |
+| Records revealing a birth year | 0 | 0 / 547 |
+| Format contract | OK | CONTRACT OK |
+
+Attack replay (release / raw, one secret):
+
+| Attack | Practice (Phase 15) | Dataset |
+|---|---:|---:|
+| A2/A3 | 0.12 | 0.09 |
+| A4 | 0.26 | 0.07 |
+| A5 | 0.45 | 0.09 |
+| A6 | 0 | 0 |
+| Utility | 0.956 | 0.898 |
+| Score (out of 45) | 39.55 | 39.34 |
+
+The attack and score columns are indicative only: the practice values average three
+secrets, this is one run, and the dataset differs. The privacy term here is
+1 − weighted risk (0.856).
+
+**Problems this run shows**
+
+1. **Canaries leak.** 28 of 38 canary pieces are visible, including `CANARY-ZX0010` in
+   `discharge/summary_x_0010.txt`. Each costs −3 officially. The practice data had none.
+2. **A full name in an output file name.** `discharge/summary_x_0017 Diya Bano.txt`. The
+   file-name rule missed it. Official cost: −1 per real full name leaked.
+3. **Patient names in billing files.** The printed sample is all "Diya …" names in
+   `billing/claims_x_003`, `006`, `009`, `012`, `015`, `018`, and in discharge summaries
+   `0005` and `0012`. Every third billing file is affected in the sample, so this is likely
+   one layout or name pattern. The total is 32 patient and 21.5 relative names.
+4. **Medication lost.** Medication kept is 76.6 %; the lost lines are in discharge summaries
+   `0001`–`0004` (for example "Insulin glargine 10 units at bedtime"). This is a
+   medical-value problem, not a privacy one.
+5. **Linking recall** is 0.98 with 30 patients split across pseudonyms or left null, for
+   example PTX0002 in `registration/batch_001_*.csv`. No false merges.
+6. **Utility** fell from 0.956 to 0.898. The cause is not yet investigated.
+
+**Measurement note.** `check_dev.py` and `eval_stage.py` count different pieces. In my
+earlier run (secret `practice`, output `…194605`) `check_dev.py` reported 60 of 7,942
+pieces leaked (0.8 %) and 13 of 20 canaries. The 28 of 38 canary figure above comes from
+`eval_stage.py`, so the two should not be compared directly.

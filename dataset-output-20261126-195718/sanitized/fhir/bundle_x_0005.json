@@ -1,0 +1,117 @@
+{
+  "resourceType": "Bundle",
+  "id": "bundle-x-0005",
+  "type": "document",
+  "timestamp": "2026-04-17T12:00:00Z",
+  "meta": {
+    "source": "urn:export:nightly"
+  },
+  "entry": [
+    {
+      "fullUrl": "urn:uuid:patient-0005",
+      "resource": {
+        "resourceType": "Patient",
+        "id": "patient-0005",
+        "identifier": [
+          {
+            "system": "urn:uhid",
+            "value": "[ID]"
+          },
+          {
+            "system": "urn:phone",
+            "value": "[ID]"
+          },
+          {
+            "system": "urn:aadhaar",
+            "value": "[AADHAAR]"
+          },
+          {
+            "system": "urn:abha",
+            "value": "[ABHA]"
+          }
+        ],
+        "name": [
+          {
+            "text": "PSN-83P63T",
+            "family": "PSN-83P63T",
+            "given": [
+              "PSN-83P63T"
+            ]
+          }
+        ],
+        "birthDate_as_printed": "[DOB]",
+        "address": [
+          {
+            "text": "[HOUSE], Unnao, Sitapur 261***"
+          }
+        ],
+        "telecom": [
+          {
+            "system": "phone",
+            "value": "[PHONE]"
+          }
+        ],
+        "contact": [
+          {
+            "relationship": [
+              {
+                "text": "relative"
+              }
+            ],
+            "name": {
+              "text": "[RELATIVE]"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "fullUrl": "urn:uuid:encounter-0005",
+      "resource": {
+        "resourceType": "Encounter",
+        "id": "encounter-0005",
+        "subject": {
+          "reference": "urn:uuid:patient-0005"
+        },
+        "period": {
+          "start": "2026-04-17"
+        },
+        "reasonCode": [
+          {
+            "text": "Epilepsy, unspecified, not intractable"
+          }
+        ]
+      }
+    },
+    {
+      "fullUrl": "urn:uuid:composition-0005",
+      "resource": {
+        "resourceType": "Composition",
+        "id": "composition-0005",
+        "status": "final",
+        "type": {
+          "text": "Clinical summary"
+        },
+        "subject": {
+          "reference": "urn:uuid:patient-0005"
+        },
+        "date": "2026-04-17T12:00:00Z",
+        "author": [
+          {
+            "display": "Arogya Seva Sadan"
+          }
+        ],
+        "title": "Synthetic longitudinal observations",
+        "section": [
+          {
+            "title": "Observation history",
+            "text": {
+              "status": "generated",
+              "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Observation 01: BP 90/60 mmHg; HR 0 bpm; temperature 39.4 C; SpO2 72%; glucose hemolyzed mmol/L; sodium 0 mmol/L; assessment Epilepsy, unspecified, not intractable; status repeat requested.</p><p>Observation 02: BP 0/0 mmHg; HR 198 bpm; temperature -1.0 C; SpO2 100%; glucose -1 mmol/L; sodium 190 mmol/L; assessment Infectious gastroenteritis and colitis; status instrument error.</p><p>Observation 03: BP not recorded mmHg; HR NA bpm; temperature NA C; SpO2 NA%; glucose 33.3 mmol/L; sodium NA mmol/L; assessment Low back pain; status follow-up advised.</p><p>Observation 04: BP 120/80 mmHg; HR 72 bpm; temperature 36.8 C; SpO2 98%; glucose 5.6 mmol/L; sodium 140 mmol/L; assessment Type 2 diabetes mellitus without complications; status stable.</p><p>Observation 05: BP 90/60 mmHg; HR 0 bpm; temperature 39.4 C; SpO2 72%; glucose hemolyzed mmol/L; sodium 0 mmol/L; assessment Essential (primary) hypertension; status repeat requested.</p><p>Observation 06: BP 0/0 mmHg; HR 198 bpm; temperature -1.0 C; SpO2 100%; glucose -1 mmol/L; sodium 190 mmol/L; assessment Pneumonia, unspecified organism; status instrument error.</p><p>Observation 07: BP not recorded mmHg; HR NA bpm; temperature NA C; SpO2 NA%; glucose 33.3 mmol/L; sodium NA mmol/L; assessment Crohn&#x27;s disease, unspecified; status follow-up advised.</p><p>Observation 08: BP 120/80 mmHg; HR 72 bpm; temperature 36.8 C; SpO2 98%; glucose 5.6 mmol/L; sodium 140 mmol/L; assessment Chest pain, unspecified; status stable.</p><p>Observation 09: BP 90/60 mmHg; HR 0 bpm; temperature 39.4 C; SpO2 72%; glucose hemolyzed mmol/L; sodium 0 mmol/L; assessment Epilepsy, unspecified, not intractable; status repeat requested.</p><p>Observation 10: BP 0/0 mmHg; HR 198 bpm; temperature -1.0 C; SpO2 100%; glucose -1 mmol/L; sodium 190 mmol/L; assessment Infectious gastroenteritis and colitis; status instrument error.</p><p>Observation 11: BP not recorded mmHg; HR NA bpm; temperature NA C; SpO2 NA%; glucose 33.3 mmol/L; sodium NA mmol/L; assessment Low back pain; status follow-up advised.</p><p>Observation 12: BP 120/80 mmHg; HR 72 bpm; temperature 36.8 C; SpO2 98%; glucose 5.6 mmol/L; sodium 140 mmol/L; assessment Type 2 diabetes mellitus without complications; status stable.</p><p>Observation 13: BP 90/60 mmHg; HR 0 bpm; temperature 39.4 C; SpO2 72%; glucose hemolyzed mmol/L; sodium 0 mmol/L; assessment Essential (primary) hypertension; status repeat requested.</p><p>Observation 14: BP 0/0 mmHg; HR 198 bpm; temperature -1.0 C; SpO2 100%; glucose -1 mmol/L; sodium 190 mmol/L; assessment Pneumonia, unspecified organism; status instrument error.</p><p>Observation 15: BP not recorded mmHg; HR NA bpm; temperature NA C; SpO2 NA%; glucose 33.3 mmol/L; sodium NA mmol/L; assessment Crohn&#x27;s disease, unspecified; status follow-up advised.</p><p>Observation 16: BP 120/80 mmHg; HR 72 bpm; temperature 36.8 C; SpO2 98%; glucose 5.6 mmol/L; sodium 140 mmol/L; assessment Chest pain, unspecified; status stable.</p><p>Observation 17: BP 90/60 mmHg; HR 0 bpm; temperature 39.4 C; SpO2 72%; glucose hemolyzed mmol/L; sodium 0 mmol/L; assessment Epilepsy, unspecified, not intractable; status repeat requested.</p><p>Observation 18: BP 0/0 mmHg; HR 198 bpm; temperature -1.0 C; SpO2 100%; glucose -1 mmol/L; sodium 190 mmol/L; assessment Infectious gastroenteritis and colitis; status instrument error.</p></div>"
+            }
+          }
+        ]
+      }
+    }
+  ]
+}

@@ -1,0 +1,11 @@
+PatientID,LastName,FirstName,Sex,DOB (MM/DD/YYYY),Guardian,Street,City,District,Zip,Phone,Email,Registered (MM/DD/YYYY),Notes
+[ID],PSN-EMWZJ7,PSN-EMWZJ7,M,[DOB],S/O [RELATIVE],"[HOUSE], [LOCALITY]",Sitapur,Sitapur,261***,[PHONE],,02/09/2026,"Pt allergic to sulfa drugs.
+Old card merged - verify identity on next visit."
+[ID],PSN-48N9V5,PSN-48N9V5,M,[DOB],S/O [RELATIVE],[HOUSE],Sitapur,Sitapur,261***,[PHONE],,04/12/2025,Temp 101.2°F on arrival – sent to emergency.
+[ID],PSN-D8JFC4,PSN-D8JFC4,F,[DOB],W/O [RELATIVE],"[HOUSE], [LOCALITY]",Sitapur,Sitapur,261***,[PHONE],,04/13/2024,
+[ID],,PSN-GQV2CP,M,[DOB],S/O [RELATIVE],"[HOUSE], [LOCALITY]",Sitapur,Sitapur,261***,[PHONE],,04/19/2026,
+[ID],PSN-K73MQF,PSN-K73MQF,F,[DOB],W/O [RELATIVE],[HOUSE],Bahraich,Bahraich,271***,[PHONE],[EMAIL],03/18/2026,"Pt allergic to sulfa drugs.
+Old card merged - verify identity on next visit."
+[ID],,PSN-GQV2CP,M,[DOB],S/O [RELATIVE],"[HOUSE], [LOCALITY]",Sitapur,Sitapur,261***,[PHONE],,03/13/2026,
+[ID],PSN-89XZ81,PSN-89XZ81,M,[DOB],S/O [RELATIVE],[HOUSE],Sitapur,Sitapur,261***,[PHONE],,07/05/2026,Referred by ASHA worker of the village.
+[ID],PSN-HHZFPV,PSN-HHZFPV,F,[DOB],W/O [RELATIVE],[HOUSE],Sitapur,Sitapur,261***,[PHONE],,02/16/2026,
