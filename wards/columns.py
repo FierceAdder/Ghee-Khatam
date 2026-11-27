@@ -443,13 +443,37 @@ _PERSON_CONTAINERS: tuple[tuple[F, tuple[str, ...]], ...] = tuple(
         (F.ORG, "facility|hospital|organization|organisation|lab|panel|panels|department|"
                 "ward|wards|payer"),
         (F.RELATIVE_NAME, "guardian|relative|relatives|father|mother|husband|spouse|kin|"
-                          "attendant|nominee|emergency contact"),
+                          "attendant|nominee|emergency contact|relation|next of kin|nok|wife|son|daughter|"
+                         "पिता|पति|पत्नी|माता"),
         (F.PERSON_NAME, "raised by|witness|caller|informant|"
                         "contact person|contact|requested by|user"),
         (F.PATIENT_NAME, "patient|patients|pt|pat|beneficiary|member|subject|client|insured"),
     ))
 _GENERIC_NAME_KEYS = frozenset({"name", "text", "full", "full name", "display name", "local"})
 _ALWAYS_A_NAME = frozenset({"name", "full name", "display name"})
+_KIN_KEYS = ("type", "relation", "relationship", "role", "kin", "rishta", "संबंध")
+_KIN_VALUES = frozenset(TextView.of(w).text for w in (
+    "father|mother|husband|wife|spouse|son|daughter|brother|sister|guardian|relative|"
+    "पिता|माता|पति|पत्नी|बेटा|बेटी|पुत्र|पुत्री|भाई|बहन").split("|"))
+# beside one of these, "name" belongs to the person the object is a record of
+_OWN_RECORD = frozenset({F.MRN, F.AADHAAR, F.ABHA_NUMBER, F.ABHA_ADDRESS, F.DOB, F.AGE,
+                         F.AGE_SEX, F.INSURANCE_ID})
+
+
+def is_relative_entry(path: Sequence[str], siblings: dict) -> bool:
+    """A name that sits beside "husband" or "पत्नी" in a nested object is a relative's."""
+    if len(path) < 2 or normalize_label(path[-1]).strip() not in _RELATIVE_NAME_KEYS:
+        return False
+    if _container_role(path[:-1]) in (F.DOCTOR_NAME, F.STAFF_NAME, F.PATIENT_NAME):
+        return False
+    if any(classify_label(key) in _OWN_RECORD for key in siblings):
+        return False
+    return any(isinstance(value, str) and normalize_label(key).strip() in _KIN_KEYS
+               and TextView.of(value.strip()).text.casefold() in _KIN_VALUES
+               for key, value in siblings.items())
+
+
+_RELATIVE_NAME_KEYS = frozenset({"name", "full name", "fullname", "naam", "नाम"})
 _NAME_PART_KEYS = {"first": F.FIRST_NAME, "given": F.FIRST_NAME, "first name": F.FIRST_NAME,
                    "last": F.LAST_NAME, "family": F.LAST_NAME, "last name": F.LAST_NAME}
 
@@ -493,7 +517,9 @@ def classify_json_key(path: Sequence[str]) -> F:
     kind = classify_label(path[-1])
     if kind is F.PATIENT_NAME:
         role = _container_role(ancestors)
-        if role in (F.DOCTOR_NAME, F.RELATIVE_NAME, F.PERSON_NAME, F.STAFF_NAME):
+        says_patient = {"patient", "pt"} & set(key.split())
+        if not says_patient \
+                and role in (F.DOCTOR_NAME, F.RELATIVE_NAME, F.PERSON_NAME, F.STAFF_NAME):
             return role
     if kind is F.CODE and key in ("relation", "relationship"):
         return F.CODE

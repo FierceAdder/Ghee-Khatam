@@ -159,6 +159,8 @@ reproduced with new invented cases; that set is now tuned and was not used to me
 | T-116 | One separator class for identifier parts, so a number learned with `:`, `#`, `|` or brackets is found again; a date or time inside a learned number is part of it | New invented tests; all fixed sets | Tests pass, every fixed set no worse | kept: every fixed set unchanged |
 | T-117 | Degrees written as degrees, and the name they follow, are never treated as a patient or relative name | New remove/keep tests (shared given name; "Md" as a name); all fixed sets | Doctor lines unchanged, the name form "Md" still removed, fixed sets no worse | kept: every fixed set unchanged |
 | T-118 | Words between a dosage form and a dose, unit, frequency or route are the medicine; social-history words join the medical list | New invented tests with unlisted medicine names; all fixed sets | Medicine kept, a name with no dose after the form still removed, fixed sets no worse | kept: every fixed set unchanged |
+| T-119 | A name under a relation key, or beside a kinship word in a nested object, is a relative's, with no name-list check | New invented single-word names under every container word; all fixed sets | Name removed, the patient still gets a pseudonym, fixed sets no worse | kept: also cures a patient left as `[NAME]` and unlinked when the same object held an unlisted relative |
+| T-120 | A key that says patient names the patient whatever object holds it | New tests over container names; all fixed sets | Same record gives the same pseudonym under any container | kept: under staff, contact and guardian containers the key was typed as that person; the unlinked-record symptom itself came from T-119's cause |
 
 ## Questions to settle by measurement
 

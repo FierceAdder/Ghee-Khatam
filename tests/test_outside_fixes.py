@@ -2,9 +2,13 @@
 
 from __future__ import annotations
 
+import json
 import re
 
 import pytest
+
+from wards.columns import classify_json_key
+from wards.model import FieldType as F
 
 PSN = re.compile(r"^PSN-[0-9A-HJKMNP-TV-Z]{6}$")
 
@@ -121,3 +125,58 @@ def test_a_name_after_a_dosage_form_with_no_dose_is_still_removed(release, line)
 def test_social_history_words_are_kept(release, line):
     out = release({"a.txt": f"Patient Name: Pushpa Toppo\n{line}\n"})
     assert line in out.text("a.txt")
+
+
+# ------------------------------------------------- names inside a relation object (G5)
+
+UNLISTED = "Zorinsanga"          # one word, in no name list
+
+
+@pytest.mark.parametrize("box", [
+    "relation", "relative", "kin", "next_of_kin", "nok", "guardian", "attendant",
+    "emergency_contact", "father", "mother", "husband", "wife", "spouse", "son", "daughter"])
+@pytest.mark.parametrize("key", ["name", "full_name", "naam"])
+def test_a_name_under_a_relation_key_is_a_relative(release, box, key):
+    out = release({"a.json": json.dumps({"patientName": "Pushpa Toppo", "uhid": "KMC-100417",
+                                         box: {key: UNLISTED}})})
+    assert UNLISTED not in out.text("a.json")
+
+
+@pytest.mark.parametrize("kin", ["husband", "पति", "पत्नी", "Mother"])
+def test_a_name_beside_a_kinship_word_is_a_relative(release, kin):
+    out = release({"a.json": json.dumps({
+        "patientName": "Pushpa Toppo", "uhid": "KMC-100417",
+        "linked": {"type": kin, "name": UNLISTED}}, ensure_ascii=False)})
+    assert UNLISTED not in out.text("a.json")
+
+
+# ------------------------------------------- a patient-name key under any container (G4)
+
+
+@pytest.mark.parametrize("box", ["people", "persons", "records", "admissions", "entries",
+                                 "visits", "cases", "registrations", "members", "contact",
+                                 "reported_by", "informant", "wards_staff"])
+@pytest.mark.parametrize("key", ["patientName", "pt_name", "patient_full_name"])
+def test_a_key_that_says_patient_names_the_patient_under_any_container(release, box, key):
+    record = {"crn_no": "KMC-100417", key: "Vanlalpeka"}
+    out = release({"a.json": json.dumps({box: [record]}),
+                   "b.txt": "Patient Name: Vanlalpeka\nUHID: KMC-100417\n"})
+    claims = out.claims()
+    first = next(p for (name, _), p in claims.items() if name == "a.json")
+    assert PSN.match(first or "") and first == claims[("b.txt", "doc")]
+    assert first in out.text("a.json")
+
+
+@pytest.mark.parametrize("box", ["contact", "reported_by", "guardian", "nurse"])
+@pytest.mark.parametrize("key", ["patientName", "pt_name", "patient_full_name"])
+def test_the_container_does_not_override_a_patient_key(box, key):
+    assert classify_json_key((box, key)) is F.PATIENT_NAME
+
+
+def test_an_unlisted_relative_does_not_cost_the_patient_their_pseudonym(release):
+    record = {"crn_no": "KMC-100417", "patientName": "Vanlalpeka",
+              "relation": {"type": "husband", "name": UNLISTED}}
+    out = release({"a.json": json.dumps({"people": [record]})})
+    saved = json.loads(out.text("a.json"))["people"][0]
+    assert PSN.match(saved["patientName"])
+    assert saved["relation"]["name"] == "[RELATIVE]"
