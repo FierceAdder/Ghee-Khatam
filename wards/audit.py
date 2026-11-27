@@ -23,7 +23,7 @@ from wards.link import name_tokens
 from wards.model import CLIPPED, NAME_TYPES, Document, Mention, Segment
 from wards.model import EntityType as E
 from wards.model import FieldType as F
-from wards.normalize import id_key, phone_key
+from wards.normalize import ID_SEPARATOR, id_key, phone_key
 from wards.textview import TextView
 from wards.veto import Veto
 
@@ -43,7 +43,8 @@ _MAX_ID_CHUNKS = 7
 
 _CHUNK = re.compile(r"[A-Za-z0-9]+")
 _WORD = re.compile(r"[A-Za-z0-9]+|[\u0900-\u0963\u0971-\u097f]+")
-_ID_GAP = re.compile(r"^[ \t\-./()_+]{0,3}$")
+# the release gate allows one character more than detection does, and a "+"
+_ID_GAP = re.compile(rf"^(?:{ID_SEPARATOR}|\+){{0,3}}$")
 _NAME_GAP = re.compile(r"^(?:[ \t_\-]{1,2}|\. ?)$")
 _PHRASE_GAP = re.compile(r"^[ \t.,\-/#:]{0,3}$")
 _MAILBOX = re.compile(r"[\w.+\-]+@[\w.\-]+\w")

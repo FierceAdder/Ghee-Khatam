@@ -17,7 +17,16 @@ from wards.lexicon import District, Lexicon
 from wards.model import CLIPPED, Channel, Document, Mention, Record, Segment
 from wards.model import EntityType as E
 from wards.model import FieldType as F
-from wards.normalize import digits_only, id_key, is_devanagari, phone_key, skeleton, transliterate
+from wards.normalize import (
+    ID_GAP,
+    ID_SEPARATOR,
+    digits_only,
+    id_key,
+    is_devanagari,
+    phone_key,
+    skeleton,
+    transliterate,
+)
 
 _SWEEP_PRIORITY = 91
 _ID_PARTS = re.compile(r"[A-Za-z]+|\d+|[^A-Za-z\d]+")
@@ -29,7 +38,7 @@ _DIGIT_TYPES = (E.AADHAAR, E.ABHA_NUMBER, E.PHONE)
 _SHAPED_TYPES = (E.MRN, E.INSURANCE_ID)
 # A known number is found whatever separates its parts ("TQV/R/3318" in "tqv_r_3318.txt").
 _CHUNK = re.compile(r"[A-Za-z0-9]+")
-_NUMBER_GAP = re.compile(r"^[ \t]?[/\-_.\\]?[ \t]?$")
+_NUMBER_GAP = re.compile(rf"^{ID_GAP}$")
 _MAX_CHUNKS = 7
 _SHORT_CORE = re.compile(r"(?<!\d)\d{4}(?!\d)")
 _YEAR = re.compile(r"(?:19|20)\d\d$")
@@ -53,8 +62,8 @@ def id_shape(value: str, min_digits: int = 5) -> str | None:
         elif part.isdigit():
             pieces.append(rf"\d{{{len(part)}}}")
             digits += len(part)
-        elif re.fullmatch(r"[ \t/\-_.]{1,2}", part):
-            pieces.append(r"[ /\-_.]?")
+        elif re.fullmatch(ID_GAP, part):
+            pieces.append(rf"{ID_SEPARATOR}{{0,3}}")
         else:
             return None
     # Without a letter prefix the shape would match any lab value of the same length.

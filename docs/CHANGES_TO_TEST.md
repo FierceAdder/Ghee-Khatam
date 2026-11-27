@@ -152,6 +152,12 @@ reproduced with new invented cases; that set is now tuned and was not used to me
 | T-114 | A note sharing a phone with several record sets is left aside only if they name different people (part of T-106) | New test with invented data; all fixed sets | No false merge anywhere | kept: the first blind run had one false merge from the earlier rule (precision 0.998, recall 0.534); after the fix 1.000 and 0.547; every other set unchanged |
 | T-115 | Remove a given name that is also an ordinary word (found as one name left visible on the blind set) | New remove/keep cases; fixed sets | Name removed, ordinary sentences unchanged | open |
 
+## Found on a second outside set
+
+| ID | Change to test | How to measure | Keep if | Status |
+|---|---|---|---|---|
+| T-116 | One separator class for identifier parts, so a number learned with `:`, `#`, `|` or brackets is found again; a date or time inside a learned number is part of it | New invented tests; all fixed sets | Tests pass, every fixed set no worse | kept: every fixed set unchanged |
+
 ## Questions to settle by measurement
 
 | ID | Question | Why it matters | Status |

@@ -136,6 +136,12 @@ def digits_only(value: str) -> str:
     return _NON_DIGIT.sub("", value)
 
 
+# What may stand between the parts of one identifier, wherever it is written.
+ID_SEPARATOR = r"[ \t/\\\-_.:#|()]"
+# At most two of them between two parts, or one with a blank either side ("AB : 12").
+ID_GAP = rf"(?:{ID_SEPARATOR}{{0,2}}|[ \t]{ID_SEPARATOR}[ \t])"
+
+
 def id_key(value: str) -> str:
     """Canonical form of an identifier: upper-case letters and digits only."""
     return _NON_ALNUM.sub("", value).upper()
