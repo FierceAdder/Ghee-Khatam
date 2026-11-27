@@ -55,6 +55,19 @@ _NAME_WORD = r"(?:[A-Z][A-Za-z'\-]*\.?|[\u0900-\u0963\u0971-\u097f]+\.?)"
 _DEGREE_HOLDER = _compile(
     rf"{_EDGE}{_NAME_WORD}(?:[ \t]{_NAME_WORD}){{0,3}}[ \t]*,?[ \t]*(?=(?:{_ONLY_DEGREE}{_END}"
     rf"|{_ANY_DEGREE}{_END}(?:{_LISTED}){_ANY_DEGREE}{_END}))")
+# "Inj <drug> 200 mg IV": after a dosage form, the words before a dose, unit, frequency or
+# route are the medicine, whether or not any list holds it.
+_DOSAGE_FORM = _compile(
+    r"(?<![A-Za-z])(?:tab|tabs|tablet|cap|caps|capsule|inj|injection|syp|syr|syrup|susp|suspension|"
+    r"oint|ointment|cream|gel|drops|neb|nebulisation|nebulization|inhaler|sachet|supp|suppository)"
+    r"(?![A-Za-z])\.?[ \t]+", re.IGNORECASE)
+_DRUG_WORD = _compile(r"[A-Za-z][A-Za-z\-+]*(?![A-Za-z0-9])[ \t]*")
+_DOSING = _compile(
+    r"(?:\d+(?:\.\d+)?[ \t]?)?(?:mg/m2|mg/kg|mg|mcg|µg|μg|ug|gm|g|ml|iu|units?|puffs?)(?![A-Za-z])"
+    r"|[0-4½](?:\.5)?(?:-[0-4½](?:\.5)?){2,3}(?![\d\-])"
+    r"|(?:od|bd|bid|tds|tid|qid|qds|hs|sos|stat|iv|im|sc|po)(?![A-Za-z])", re.IGNORECASE)
+_NEXT_TOKEN = _compile(r"[^ \t\n]+[ \t]*")
+_MAX_DRUG_WORDS, _DOSING_REACH = 3, 4
 _EPONYM = re.compile(
     r"(?<![A-Za-z])[A-Z][a-z]+(?:[\- ][A-Z][a-z]+)?(?:['’]s)?[ \t]+"
     r"(?i:disease|syndrome|palsy|lymphoma|sarcoma|thyroiditis|contracture|chorea|an[ae]emia|"
@@ -127,7 +140,7 @@ class Veto:
                         spans.append((m.start(), tokens[run[-1]].end))
         for pattern in (_EPONYM, _ASHA, _ABHA_LABEL, _QUALIFICATION, _DEGREES):
             spans.extend(m.span() for m in pattern.finditer(text))
-        return spans
+        return spans + self._drug_spans(text)
 
     @staticmethod
     def _doctor_run(tokens: Tokens, index: int) -> list[int]:
@@ -143,6 +156,28 @@ class Veto:
             run.append(index)
             index += 1
         return run
+
+    @staticmethod
+    def _drug_spans(text: str) -> list[tuple[int, int]]:
+        """The medicine named between a dosage form and its dose."""
+        spans = []
+        for form in _DOSAGE_FORM.finditer(text):
+            cursor, end = form.end(), None
+            for count in range(_MAX_DRUG_WORDS + _DOSING_REACH):
+                if count and _DOSING.match(text, cursor):
+                    if end is not None:
+                        spans.append((form.end(), end))
+                    break
+                word = _DRUG_WORD.match(text, cursor)
+                if word and count < _MAX_DRUG_WORDS:
+                    end = cursor + len(word.group(0).rstrip())
+                    cursor = word.end()
+                    continue
+                other = _NEXT_TOKEN.match(text, cursor)
+                if not other or end is None or count >= _DOSING_REACH:
+                    break
+                cursor = other.end()
+        return spans
 
     @staticmethod
     def value_spans(text: str) -> list[tuple[int, int]]:

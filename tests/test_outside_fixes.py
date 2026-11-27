@@ -88,3 +88,36 @@ def test_the_short_form_of_a_name_is_not_taken_for_a_degree(release, line):
     out = release({"a.txt": f"{line}\nUHID: KMC-100417\n",
                    "reg.csv": table(["Patient Name"], [["Md Danish Qureshi"]])})
     assert "danish" not in out.text("a.txt").casefold()
+
+
+# --------------------------------------------------- medicines after a dosage form (G2)
+
+# invented medicine names that are in no list
+
+
+@pytest.mark.parametrize(("line", "drug"), [
+    ("Inj Velcarimod 200 mg IV given.", "Velcarimod"),
+    ("Tab Zorivanta 1 mg 1-0-1", "Zorivanta"),
+    ("Cap. Pelmoxane Forte 250mg BD", "Pelmoxane Forte"),
+    ("Syp Ravinderol 5 ml at night", "Ravinderol"),
+    ("Injection Santoplex SC stat", "Santoplex"),
+])
+def test_an_unlisted_medicine_before_its_dose_is_kept(release, line, drug):
+    out = release({"a.txt": f"Patient Name: Pushpa Toppo\n{line}\n"})
+    assert drug in out.text("a.txt")
+
+
+@pytest.mark.parametrize("line", [
+    "Gave the Tab Pushpa Toppo was asking for.",
+    "Report in Tab Pushpa Toppo shared yesterday",
+])
+def test_a_name_after_a_dosage_form_with_no_dose_is_still_removed(release, line):
+    out = release({"a.txt": f"Patient Name: Pushpa Toppo\n{line}\n"})
+    assert "Pushpa" not in out.text("a.txt")
+
+
+@pytest.mark.parametrize("line", ["Alcohol: denies", "Tobacco: nil", "Gutka: occasional",
+                                  "Smoking: never", "Betel: chews daily"])
+def test_social_history_words_are_kept(release, line):
+    out = release({"a.txt": f"Patient Name: Pushpa Toppo\n{line}\n"})
+    assert line in out.text("a.txt")

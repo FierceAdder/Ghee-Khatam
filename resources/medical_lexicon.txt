@@ -1,6 +1,10 @@
 # Medicines, conditions, procedures and clinical words. A token listed here is never
 # treated as a person's name by the free-text detectors. Several lower-case words per line.
 
+# social history
+alcohol betel gutka gutkha smoking tobacco
+chews denies occasional occasionally
+
 # generic medicines
 acarbose aceclofenac acetaminophen acetylcysteine acyclovir adrenaline albendazole
 allopurinol alprazolam ambroxol amikacin aminophylline amiodarone amitriptyline
