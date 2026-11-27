@@ -12,7 +12,7 @@ from collections import defaultdict
 from dataclasses import dataclass, field
 
 from wards.detect.tokens import Tokens
-from wards.lexicon import Lexicon
+from wards.lexicon import Lexicon, loose_spelling
 from wards.link import name_tokens
 from wards.model import NAME_TYPES, Channel, Mention, Role, Segment
 from wards.model import EntityType as E
@@ -20,6 +20,9 @@ from wards.model import FieldType as F
 
 _SWEEP_PRIORITY = 56
 _JOIN = re.compile(r"^(?:[ _\-]|\. ?)$")
+# The words glued into a file name, and the capitalised pieces of one ("rptImli").
+_PATH_WORD = re.compile(r"[A-Za-z]+|[\u0900-\u0963\u0971-\u097f]+")
+_CAMEL_PIECE = re.compile(r"[A-Z]+(?![a-z])|[A-Z]?[a-z]+")
 _SKIP_FIELDS = frozenset({F.CODE, F.ORG, F.DOCTOR_NAME, F.DISTRICT, F.STATE, F.SEX,
                           F.ATTACHMENT})
 
@@ -54,6 +57,7 @@ class NameSweeper:
         self.sequences: dict[str, set[tuple[str, ...]]] = defaultdict(set)
         self.patient_keys: set[str] = set()
         self.patient_words: set[str] = set()
+        self.patient_loose: set[str] = set()      # spellings compared across scripts
 
     def register(self, mention: Mention) -> None:
         """Remember a detected name for the dataset-wide search."""
@@ -72,6 +76,8 @@ class NameSweeper:
             distinctive = [w for w in words if not self.lexicon.is_generic(w) and len(w) > 2]
             self.patient_keys.update(self.lexicon.name_key(w) for w in distinctive)
             self.patient_words.update(self.lexicon.canonical(w) for w in distinctive)
+            self.patient_loose.update(loose_spelling(self.lexicon.canonical(w))
+                                      for w in distinctive)
 
     def sweep(self, segment: Segment, bag: NameBag | None) -> list[Mention]:
         if segment.field in _SKIP_FIELDS or segment.numeric:
@@ -110,7 +116,40 @@ class NameSweeper:
                         and (self.lexicon.canonical(token.text) in self.patient_words
                              or self.lexicon.is_known_name(token.text)):
                     roles[index] = Role.UNKNOWN
-        return self._group(text, tokens, roles)
+        found = self._group(text, tokens, roles)
+        if segment.field is F.PATH:
+            found += self._path_names(text)
+        return found
+
+    def _path_names(self, text: str) -> list[Mention]:
+        """Any part of any patient's name in a file name: any case, either script, alone or
+        glued to another word."""
+        found = []
+        for word in _PATH_WORD.finditer(text):
+            spans = [word.span()]
+            if word.group(0).isascii():
+                spans += [piece.span() for piece in
+                          _CAMEL_PIECE.finditer(text, word.start(), word.end())
+                          if piece.span() != word.span()]
+            for start, end in spans:
+                if self._names_a_patient(text[start:end]):
+                    found.append(Mention(E.PATIENT_NAME, start, end, text[start:end],
+                                         priority=_SWEEP_PRIORITY, source="sweep"))
+        return found
+
+    def _names_a_patient(self, word: str) -> bool:
+        """A given name or surname of a patient, that is no common or medical word."""
+        lexicon = self.lexicon
+        if len(word) < (2 if not word.isascii() else 3) or lexicon.is_stopword(word) \
+                or lexicon.is_medical(word) or lexicon.is_generic(word):
+            return False
+        canonical = lexicon.canonical(word)
+        if canonical in self.patient_words:
+            return True
+        # another spelling or the other script: the sound and the consonant frame agree
+        return lexicon.name_key(word) in self.patient_keys \
+            and (lexicon.is_known_name(word)
+                 or loose_spelling(canonical) in self.patient_loose)
 
     def _written_as_name(self, tokens: Tokens, index: int) -> bool:
         token = tokens[index]

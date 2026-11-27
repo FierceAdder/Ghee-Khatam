@@ -33,10 +33,10 @@
 Repository: github.com/FierceAdder/Ghee-Khatam</p>
 
 <h2>1. In one paragraph</h2>
-<p>An offline, CPU-only firewall, written in the Python standard library with no models, that
+<p>An offline, CPU-only firewall (Python; rules plus one small declared model, no LLM) that
 cleans hospital records in English, Hindi and Hinglish. It removes personal data, keeps
 medical values, gives each patient one keyed pseudonym across files and quarantines what it
-cannot clean. Two ideas set it apart: nothing is published until the finished files have been
+cannot clean. Raw and staged data can be encrypted at rest. Two ideas set it apart: nothing is published until the finished files have been
 searched and re-read, and privacy settings were chosen by replaying the published attacks
 against our own output.</p>
 
@@ -70,7 +70,8 @@ text for names no rule found; it only adds detections and never links records.
 A medical veto keeps doctors, hospitals, disease eponyms, the ASHA role, doses and
 <code>1-0-1</code>. Identifiers learned in one file are removed from all, file names included.</li>
 <li><b>Linkage:</b> union-find over strong identifiers first, then name plus a second clue
-that fits only one person (birth date, relative, village). A merge is refused if it would join
+that fits only one person (birth date, relative, village), then a registered phone with a
+matching name, and rows of one specimen or visit. A merge is refused if it would join
 two Aadhaar numbers, sexes, incompatible ages or given names. Devanagari and Latin spellings
 share a phonetic key. When unsure the answer is <code>null</code>. Pseudonyms are
 HMAC-SHA256 under <code>RAKSHA_SECRET</code>.</li>
@@ -96,58 +97,55 @@ keys and keeps name regions, wordings and layouts held out; a version is judged 
 <table>
 <tr><th style="width:44%">Measure</th><th>Value</th></tr>
 <tr><td>Personal data leaked (overall / Hindi / Hinglish)</td><td>0 % / 0 % / 0 % (0 of 3,230 pieces); canaries 0 of 4</td></tr>
-<tr><td>Medical values kept</td><td>99.0 % (mostly five one-patient diagnoses, on purpose)</td></tr>
-<tr><td>Linking precision / recall / F0.5</td><td>1.00 / 1.00 / 1.00; homonym pairs kept apart 2 of 2</td></tr>
-<tr><td>Event intervals exact; birth years revealed</td><td>100 % of 15,757 pairs; 0 of 111 records</td></tr>
-<tr><td>Re-identification risk, our replay, relative to raw input</td><td>direct exposure 0; record linkage 0.12; profile 0.26; targeted 0.45 (3-secret mean, up to 0.53)</td></tr>
-<tr><td>Estimated utility / privacy</td><td>0.956 / 0.817</td></tr>
-<tr><td>Time and peak memory, Docker, 2 CPUs</td><td>200 files: 26.6 s, 334 MB (1.7 s without IndicBERT); about 0.17 s per unique file; identical output on Linux and macOS</td></tr>
+<tr><td>Medical values kept</td><td>99.1 % (mostly five one-patient diagnoses, on purpose)</td></tr>
+<tr><td>Linking precision / recall / F0.5</td><td>1.00 / 1.00 / 1.00</td></tr>
+<tr><td>Re-identification risk, our calibrated replay, relative to raw input</td><td>direct exposure 0; record linkage 0.25; profile 0.23; <b>targeted 0.57</b> (10 secrets)</td></tr>
+<tr><td>Estimated utility / privacy</td><td>0.953 / 0.766</td></tr>
+<tr><td>Time and peak memory, Docker, 2 CPUs</td><td>200 files: 12 s, 341 MB; 2,419 blind files: 31 s, 359 MB; identical output on Linux and macOS</td></tr>
 </table>
 <p>Estimates, not the official evaluator. Each choice below was compared on
 25 × privacy + 20 × utility (maximum 45):</p>
 <table>
 <tr><th style="width:44%">Choice</th><th>What it gained and cost</th></tr>
-<tr><td>Remove birth dates rather than shift them</td><td>39.6 against 35.0; profile attack 0.26 against 0.87. Gives up credit for a generalised birth date.</td></tr>
-<tr><td>Age bands up to 15 years rather than 5</td><td>39.6 against 37.4; widening to 20 would add only 0.1. Coarser ages for research.</td></tr>
-<tr><td>Suppress one-patient diagnoses</td><td>Targeted attack 0.52 to 0.45; utility 0.966 to 0.956. Thresholds of 2 to 5 patients scored lower.</td></tr>
+<tr><td>Remove birth dates rather than shift them or keep the year</td><td>38.2 against 31.1; profile attack 0.23 against 0.87. Gives up credit for a generalised birth date.</td></tr>
+<tr><td>Age bands up to 15 years rather than 5</td><td>38.2 against 37.2. Coarser ages for research.</td></tr>
+<tr><td>Suppress one-patient diagnoses</td><td>Targeted attack 0.64 to 0.57; utility 0.962 to 0.953. Thresholds of 2 and 3 patients scored lower.</td></tr>
 </table>
 
-<p><b>Data we had not tuned on.</b> Generated test sets use only held-out name regions
-(North-east, South, Adivasi, West), label wordings and layouts (referral slips, MCH cards,
-medico-legal registers, handover notes…); seeds 4–6 were generated after every choice.</p>
+<p><b>Data we had not tuned on.</b> Our generator holds out name regions, label wordings and
+layouts. Seeds 7–9 were run once at the end; a 2,419-file blind set was run once before any fix.</p>
 <table>
-<tr><th>Unseen test sets (3)</th><th>Leaked</th><th>Names leaked</th><th>Canaries</th><th>Linking P / R</th></tr>
-<tr><td>Phase 12, first run</td><td>7.7–8.0 %</td><td>—</td><td>0</td><td>0.94–1.00 / 0.73–0.74</td></tr>
-<tr><td>Rules only, final</td><td>2.4–2.9 %</td><td>13 / 7 / 14</td><td>0 / 1 / 0</td><td>0.95–1.00 / 0.67–0.79</td></tr>
-<tr><td><b>Rules + IndicBERT, final</b></td><td><b>1.2–1.9 %</b></td><td><b>1 / 0 / 0</b></td><td>0</td><td>0.95–1.00 / 0.67–0.79</td></tr>
+<tr><th>Data</th><th>Leaked</th><th>Canaries</th><th>Medical kept</th><th>Linking P / R</th></tr>
+<tr><td>Held-out seeds 7–9</td><td>1.4–1.9 %; no phone, ID number or full name</td><td>0</td><td>99.1–100 %</td><td>0.92–0.95 / 0.66–0.72</td></tr>
+<tr><td>Blind set, first run</td><td>structured identifiers 0; one given name that is also a word</td><td>—</td><td>99–100 %</td><td>0.998 / 0.534</td></tr>
+<tr><td>Blind set after one linking fix (tuned)</td><td>unchanged</td><td>—</td><td>99–100 %</td><td>1.000 / 0.547</td></tr>
 </table>
-<p>The same author wrote the generator and the fixes, so <b>expect worse on truly new
-formats</b>; linking on unseen layouts is the weakest part.</p>
+<p>Each held-out seed has <b>one false merge</b>. The same author wrote the generator and the
+fixes, so expect worse on truly new formats.</p>
 
 <h2>6. Security design</h2>
 <ul>
 <li>The secret is read from the environment once, cannot be printed or serialised, and is never
 written; a run without it is refused.</li>
-<li>Raw values and the pseudonym map stay in memory. Only redacted bytes are written, inside
-the output folder, so there is no intermediate store to encrypt. <b>Encryption at rest is not
-implemented</b>: input, output and swap need an encrypted volume.</li>
-<li>Logs hold counts, reason codes and file-hash prefixes only. Input is read only; core dumps
-are disabled; containers run with no network and a read-only root.</li>
-<li>One bad file is quarantined. A run-wide failure, <code>SIGTERM</code> or an out-of-memory
-error removes staged files, writes a report marked failed and exits non-zero.</li>
+<li><b>Encryption at rest (AES-256-GCM):</b> files awaiting the audit are on disk only as
+ciphertext, so a copy of the output folder mid-run holds only ciphertext and audited files.
+Optional sealed input and encrypted quarantine use a key per file; keys come from the secret
+and are never written. Raw values live in memory, so swap must be off or encrypted.</li>
+<li>The run log holds counts and fixed codes only, chained by keyed hashes. Input is read only;
+core dumps are disabled; containers run with no network and a read-only root.</li>
+<li>One bad file is quarantined. A run-wide failure or stop signal removes staged files, writes a
+report marked failed and exits non-zero.</li>
 </ul>
 
 <h2>7. Known limitations and next steps</h2>
 <ul>
-<li>The targeted attack still succeeds about half the time: diagnoses shared by two or three
-patients are kept.</li>
-<li>Linking recall on unseen layouts is 0.67–0.79. IndicBERT covers about 2,900 unique files in
-its 8-minute budget on 2 CPUs; files beyond it get rules only.</li>
-<li>Typing by values may over-redact unfamiliar columns. A birth date unlabelled everywhere is
-only shifted.</li>
-<li>Privacy settings rest on 48 patients. Memory grows with input; about five times the 25 MB
-case would reach 4 GB (extrapolated).</li>
-<li>Next: unfamiliar layouts, stronger linking evidence rules, compact in-memory storage.</li>
+<li><b>Targeted attack 0.57:</b> few patients share a target's sex and age, so a kept diagnosis or
+the exact stay length can single one out.</li>
+<li><b>Linking on unfamiliar layouts</b> is weakest (one false merge per held-out set).</li>
+<li>A given name that is also an ordinary word, and all-capital names in free text, can stay.</li>
+<li>IndicBERT has an 8-minute budget; files beyond it get rules only. Privacy settings rest on 48
+patients plus a 500-patient invented check.</li>
+<li>Next: those linking and name cases, hostile-file tests, a counted model budget.</li>
 </ul>
 </div>
 </body>

@@ -1,4 +1,4 @@
 [submission]
 name  = "ghee-khatam"
-setup = "pip install -r requirements.txt"                    # standard library only
+setup = "pip install -r requirements.txt"                    # cryptography is required to run
 run   = "python3 main.py --input {input} --output {output}"  # run with NO internet

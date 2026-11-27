@@ -227,6 +227,144 @@ A single run at Phase 8 with the secret `practice` gave A5 0.53, so the targeted
 depends noticeably on the date shifts. A1, A6 and A7 were 0 in that run. The medical
 values no longer kept since Phase 7 are the five one-patient diagnoses, removed on purpose.
 
+## Phase 15.5: fixes from an outside test set
+
+An outside hand-written set of 24 files and 12 patients, run once on the Phase 15 code, leaked
+21 of 204 pieces (hospital numbers 15 of 32), kept 94 of 106 medical values and linked with
+precision 1.00 and recall 0.72. It is now tuned and has not been run again, so there is no
+"after" figure for it.
+
+The fixes (T-97 to T-107) were measured on fixed sets with the learned check on:
+
+| Datasets | Leaked, before and after | Medical kept | Linking |
+|---|---|---|---|
+| Practice and its easy, hard and holdout copies | 0 of 3,230 each, unchanged | 4804-4805 to 4810 of 4855 | 1.00 / 1.00 |
+| Scrambled copies (4) | 2-3 of 3,230, unchanged | +5 to +6 | precision 1.00, recall 0.92-0.96 |
+| Generator training seeds 1-6 and one scrambled | 2-7 per set, unchanged | unchanged | precision 1.00, recall 0.95-0.99 |
+
+No wrong merge and no canary on any set; the same secret gives identical output. These sets hold
+few of the new failure cases, so "unchanged" shows no harm; the benefit is shown only by the new
+tests (984 tests pass). Known cost: on training copies with every name in capitals, leaked names
+went from 64 to 65, which also shows that all-capital names are a weak spot.
+
+## Phase 16: calibrated attack replay
+
+The replay used for earlier privacy decisions read raw record linkage as about 0.67; the
+organisers publish 0.922. After the fix (T-111), on the raw practice input:
+
+| Reading | Organisers | Replay |
+|---|---:|---:|
+| Record linkage | 0.922 | 0.965 |
+| Patients re-identified | 0.979 | 0.979 |
+| Targeted success | 1.000 | 1.000 |
+| Targeted hits, date / condition / stay | 20 / 18 / 3 | 22 / 19 / 4 |
+| Unique records (not scored) | 0.701 | 0.762 |
+| Confident record re-identification (not scored) | 0.836 | 0.908 |
+
+The definitions of the last two are not published. On reference-like settings the replay reads
+higher than the organisers publish for their reference system on their own dataset (record
+linkage 0.499 against 0.277, patients 0.563 against 0.167, targeted 0.665 against 0.401): it is
+not weaker than theirs, but the setups differ too much to call this agreement.
+
+**Current release, 10 secrets** (score is 25 x privacy + 20 x utility; older attack figures in
+this file came from the uncalibrated replay and are not comparable):
+
+| Settings | A2/A3 | A4 | A5 | Utility | Score | Worst secret |
+|---|---:|---:|---:|---:|---:|---:|
+| **current** | 0.247 | 0.234 | 0.570 | 0.953 | **38.21** | 37.88 |
+| birth dates shifted | 0.792 | 0.868 | 0.700 | 0.961 | 31.11 | 30.18 |
+| birth year only | 0.789 | 0.872 | 0.700 | 0.960 | 31.08 | 30.61 |
+| widest age band 5 | 0.289 | 0.383 | 0.570 | 0.956 | 37.22 | 36.88 |
+| widest age band 10 | 0.255 | 0.255 | 0.570 | 0.955 | 38.09 | 37.75 |
+| rare diagnoses kept | 0.247 | 0.234 | 0.642 | 0.962 | 38.00 | 37.66 |
+| suppress up to 2 patients | 0.247 | 0.234 | 0.570 | 0.937 | 37.90 | 37.56 |
+| suppress up to 3 patients | 0.247 | 0.234 | 0.570 | 0.928 | 37.71 | 37.37 |
+| one age band width for all | 0.324 | 0.255 | 0.579 | 0.956 | 37.69 | 37.33 |
+
+No earlier decision changes. A first run had scored "birth year only" above removal because the
+replay could not read a bare year; that is fixed.
+
+**On 500 invented patients** (2,500-person register, rules only): current 44.01; birth dates
+shifted 43.49; one band width 43.74; the band cap and rare-diagnosis settings tie at 44.01. Risks
+there are very low (A4 0.000), so this shows no setting getting worse at scale more than it
+shows which is best.
+
+**Targeted attack: 0.570, and the target of 0.30 or less is not met.** 74 % of successes come
+from a condition plus the hospital and 24 % from the length of stay plus the hospital. Only 1 to 4
+patient profiles are consistent with each target's sex and age, so even a diagnosis shared by
+several patients singles one out. Suppressing more diagnoses, blanking districts and ignoring the
+hospital did not move it; exact length of stay is kept on purpose.
+
+## Phase 16.0: what leaked on test seeds 4-6
+
+Existing outputs of the Phase 15 code, counts only: 57 of 3,582 pieces.
+
+| Type | Leaked | Total |
+|---|---:|---:|
+| Other IDs | 24 | 138 |
+| PIN codes | 21 | 76 |
+| Landmarks | 10 | 76 |
+| Patient names (a partial Hinglish name) | 1 | 226 |
+| Villages | 1 | 432 |
+
+All in Latin or Hinglish text content. None is a critical identifier (phone, Aadhaar, ABHA, PAN,
+hospital number, email or full patient name), so the order of work did not change.
+
+## Phase 22: final numbers
+
+### Reserved test seeds 7-9 (held-out ingredients, run once)
+
+Code of commit `1915340`; the one later change (T-114) leaves these results identical.
+
+| Seed | Files | Leaked | Names | Canaries | Medical kept | Link P / R | Wrong merges | Time, memory (Mac) |
+|---|---:|---|---:|---:|---|---|---:|---|
+| 7 | 137 | 25 of 1,317 (1.9 %) | 1 | 0 | 482 of 482 | 0.92 / 0.72 | 1 | 10 s, 333 MB |
+| 8 | 131 | 19 of 1,186 (1.6 %) | 0 | 0 | 422 of 426 | 0.95 / 0.66 | 1 | 9 s, 298 MB |
+| 9 | 133 | 17 of 1,203 (1.4 %) | 0 | 0 | 444 of 448 | 0.92 / 0.67 | 1 | 10 s, 300 MB |
+
+No critical identifier leaked: the rest are PIN codes, landmarks, other IDs, two villages and one
+partial name. **Each seed has one false merge.** The Phase 15 code, run on the same seeds for
+comparison, makes the same merges with the same precision and recall, leaks more (31, 27, 22)
+and keeps 482, 415 and 448 medical values (so seed 9 lost 4 since, seed 8 gained 7).
+
+### A blind dataset (2,419 files, 300 invented patients)
+
+Supplied by the team after Phase 16 was committed and run once before any change. It is
+templated, and its answer key holds only names and clinical facts, so identifiers were taken
+from its structured registration records and counted automatically; this is our scorer, not the
+official one.
+
+| Measure | First run |
+|---|---|
+| Time, peak memory | 30 s, 403 MB on the Mac; 31 s, 359 MB in Docker on 2 CPUs; identical output; all files within the model budget |
+| Contract, determinism, input | OK, identical over two runs, unchanged |
+| Aadhaar, ABHA, insurance IDs, hospital numbers, phones, PINs, villages, addresses, emails, full patient names | 0 visible |
+| Other automatic hits | 8 birth-date matches (equal dates in files without a birth-date column) and 1 doctor name equal to a relative's: no real leak among them |
+| **Real leak** | one given name that is also an ordinary word stays visible (about 180 value-in-file pieces) |
+| Medicines, doses, blood pressures | all kept |
+| Diagnoses; doctor names | 1,973 of 1,993; 194 of 200 |
+| Stay length in registration records | 1,200 of 1,200 preserved |
+| Linking | precision 0.998, recall 0.534, one false merge |
+
+The false merge came from a Phase 15.5 rule (the Phase 15 code makes none, at recall 0.547).
+After the fix (T-114) precision is 1.000 and recall 0.547; this second figure is tuned on this
+set. The low recall has a visible cause: the set's ages do not agree with its visit years, so
+linking refuses merges on age. The given-name leak is open (T-115).
+
+### Practice data, final code
+
+0 of 3,230 pieces visible, 0 of 4 canaries, medical values kept 4,810 of 4,855 (99.1 %), linking
+1.00 / 1.00, 12.2 s and 341 MB in Docker on 2 CPUs, byte-identical with macOS; 1,084 tests pass.
+
+## Five fixes from a second outside set (27 Nov 2026)
+
+Separators inside hospital numbers, doctors' degrees, medicines after a dosage form, names in
+relation objects and patient-name keys (T-116 to T-120), each tested with new invented data.
+All 15 fixed practice, altered and training-generator sets give the same counts as before:
+practice data 0 of 3,230 visible, 0 canaries, 4,810 of 4,855 medical values, linking 1.00 /
+1.00. The fixes therefore show no measured gain or loss on those sets. The outside set was not
+run again, and the held-out seeds and the blind set were not re-measured. 1,212 tests pass.
+
 ## Dataset run: 600 files (`dataset/`), Phase 15 configuration
 
 Output `Ghee-Khatam/dataset-output-20261126-195718`, run 2026-11-26. Secret not recorded.

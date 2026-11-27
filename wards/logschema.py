@@ -35,7 +35,7 @@ REASONS = frozenset({
     "fhir_faults_added", "format_changed", "self_scan_failed", "shape_changed",
     # anything else
     "processing_error", "run_failed", "terminated", "interrupted", "out_of_memory",
-    "other"})
+    "integrity_check_failed", "other"})
 
 # Every detector that can produce a mention (``Mention.source``). Unknown ones count as other.
 SOURCES = frozenset({
@@ -52,7 +52,8 @@ _COUNTS = ("files_total", "files_sanitized", "files_quarantined", "records_proce
            "records_linked", "records_quarantined")
 _LINKING = (
     "records", "linked", "patients", "ambiguous", "unanchored", "merged_strong",
-    "merged_dob", "merged_relative", "merged_village", "merged_given", "refused_sex",
+    "merged_dob", "merged_relative", "merged_village", "merged_given", "merged_phone",
+    "merged_local", "refused_sex",
     "refused_aadhaar", "refused_abha", "refused_dob", "refused_age", "refused_name",
     "skipped_shared_phone", "skipped_conflict", "skipped_weak")
 
@@ -77,6 +78,7 @@ EVENTS: dict[str, tuple[str, dict]] = {
     "file_sources": (DETAIL, {"file": INT, **dict.fromkeys(SOURCES, INT)}),
     "log": (SUMMARY, {"dropped": INT, "overflow": INT}),
     "name_model": (SUMMARY, {"files_skipped": INT}),
+    "quarantine_encrypted": (SUMMARY, {"files": INT}),
     "seal": (SUMMARY, {"lines": INT, "report": HEX}),
 }
 

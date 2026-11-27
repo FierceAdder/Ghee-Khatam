@@ -118,3 +118,16 @@ uttar pradesh india yugaantar
 भाभी चाचा चाची मामा मामी मौसी नाना नानी दादा दादी पापा मम्मी
 जनवरी फ़रवरी फरवरी मार्च अप्रैल मई जून जुलाई अगस्त सितंबर सितम्बर अक्टूबर अक्तूबर नवंबर
 नवम्बर दिसंबर दिसम्बर
+
+# instructions in protocols and notes ("Send the sample", "Refer if ...")
+ask send check refer inform order monitor repeat escalate recheck ensure obtain collect
+label arrange document measure notify assess recommend consider discard perform titrate
+reassess counsel
+
+# hospital staff and support roles: a role is never a person's name
+assistant assistants asst attendants helper orderly boy wardboy karmachari karamchari
+karmchari paricharak paricharika chaprasi peon compounder kampounder dresser sweeper
+phlebotomist radiographer paramedic midwife supervisor incharge intern interns nurses
+sisters technicians office duty
+कर्मचारी परिचारक परिचारिका कंपाउंडर कम्पाउंडर चपरासी बॉय वार्डबॉय टेक्नीशियन असिस्टेंट
+अटेंडेंट स्टाफ

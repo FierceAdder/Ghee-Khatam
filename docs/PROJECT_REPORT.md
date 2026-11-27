@@ -5,6 +5,26 @@ what we learned. Every number here comes from a tool in this repository (`SCORES
 `docs/CHANGES_TO_TEST.md` hold the full records); none comes from the official evaluator,
 which we have not run.
 
+## Update, 27 November (Phases 15.5, 16, 20.1 and 22)
+
+This section supersedes older figures below where they differ.
+
+| Result | Value |
+|---|---|
+| Practice data | 0 of 3,230 visible; 0 canaries; medical 99.1 %; linking 1.00 / 1.00 |
+| Attack replay, now calibrated to the organisers' raw numbers (10 secrets) | record linkage 0.25, profile 0.23, targeted 0.57; score 38.21 of 45 |
+| Held-out test seeds 7-9, run once | 1.4-1.9 % leaked, no critical identifier; linking 0.92-0.95 / 0.66-0.72, one false merge each |
+| Blind set (2,419 files), first run | structured identifiers 0; one given name left visible; linking 0.998 / 0.534; 31 s on 2 CPUs |
+| Tests | 1,084 |
+
+Added: fixes for failure families found by an outside test set (unfamiliar hospital numbers,
+lab words read as names, addresses, file names, three linking cases); AES-256-GCM encryption of
+staged files, with optional sealed input and quarantine; a calibrated attack replay, under which
+no earlier privacy setting changed. One linking rule added in this work caused a false merge on
+the blind set and was fixed. Not done: linking on unseen layouts (17), the run-time name swap
+test (18), remaining detection items (19), hostile-file tests (20.2), the counted model budget
+and scale tests (21). Detail: `SCORES.md`.
+
 ## 1. Summary
 
 An offline, CPU-only privacy firewall for a folder of Indian hospital records in English,
@@ -138,9 +158,9 @@ scripts and spellings without merging two people who share a name.
 - The secret is read once into an object that cannot be printed or serialised; runs without
   it are refused. Pseudonyms, date shifts, renamed files and the log chain are all keyed with
   it, so a different secret gives unlinkable output.
-- Only redacted bytes are written, and only inside the output folder; raw values and the
+- Files awaiting the audit are written only as AES-256-GCM ciphertext inside the output folder;
+  sealed input and encrypted quarantine are optional (`wards/crypto.py`). Raw values and the
   pseudonym map exist only in memory. Input is opened read-only; core dumps are disabled.
-  **Encryption at rest is not implemented**: input, output and swap need an encrypted volume.
 - The run log has a closed schema (numbers, fixed lists, digests, exception class names);
   files are named by position, never path; every line is HMAC-chained and sealed to
   `report.json` (`tools/verify_log.py`); the log passes the same self-scan as the data.
@@ -326,7 +346,6 @@ pseudonym inversion and cross-release linkage 0. Estimated utility 0.956.
   rules work alone. Memory grows with input (about 500 MB for 2,000 files).
 - **Our generator and our fixes come from the same author.** Records written by someone else
   (`docs/TEST_RECORDS_GUIDE.md`) remain the most important missing test.
-- **Encryption at rest** is not implemented.
 - **Open items:** diagnoses recognised by code shape under unknown keys, lower-case names,
   unlabelled birth dates, linking refinements, compact storage.
 

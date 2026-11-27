@@ -197,7 +197,7 @@ Identifiers learned:
 | 9812345670 | PHONE |
 | 9876501234 | PHONE |
 
-ID shapes learned: `KMC[ /\-_.]?\d{2}[ /\-_.]?\d{6}`
+ID shapes learned: `KMC[ \t/\\\-_.:#|()]{0,3}\d{2}[ \t/\\\-_.:#|()]{0,3}\d{6}`
 
 Villages learned: `Devipur`, `Rampurwa`
 

@@ -78,12 +78,80 @@ _STAFF_WORDS = (
     r"lab(?:oratory)?[ \t]*tech(?:nician)?|technician|technologist|pharmacist|"
     r"ward[ \t]+(?:boy|aya|aaya)|receptionist|counsell?or|data[ \t]+entry[ \t]+operator|"
     r"physiotherapist|dietitian|dietician|health[ \t]+worker|asha[ \t]+(?:worker|didi|"
-    r"sahyogini|karyakarta)|anm(?:[ \t]+didi)?)|Sister|SN|GNM|ANM|MPW|CHO|DEO|"
+    r"sahyogini|karyakarta)|anm(?:[ \t]+didi)?|"
+    r"(?:ward|lab(?:oratory)?|ot|nursing|office|hospital)[ \t]+"
+    r"(?:attendant|assistant|karmachari|karamchari|karmchari)|"
+    r"(?:ward|staff|duty|head|night|icu)[ \t]+sister|ward[ \t]*boy|compounder|"
+    r"karmachari|karamchari|karmchari)|Sister|SN|GNM|ANM|MPW|CHO|DEO|"
+    r"(?:(?:लैब|वार्ड)[ \t]+)?(?:अटेंडेंट|असिस्टेंट)|वार्ड[ \t]*बॉय|कर्मचारी|कंपाउंडर|कम्पाउंडर|"
     r"नर्स|सिस्टर|फार्मासिस्ट|तकनीशियन|एएनएम|आशा[ \t]*(?:कार्यकर्ता|दीदी|सहयोगिनी)?)")
 _STAFF_BEFORE = _compile(
     r"(?<![A-Za-z\u0900-\u097f'’])(?<!his )(?<!her )(?<!uski )(?<!unki )" + _STAFF_WORDS
     + r"(?![A-Za-z\u0900-\u097f])[ \t]*[:\-–]?[ \t]*")
 _STAFF_AFTER = _compile(r"[ \t]*[,(][ \t]*" + _STAFF_WORDS + r"(?![A-Za-z\u0900-\u097f])")
+
+# "Sister" is a nurse's title ("Sister Imli", "ward sister") unless the words before it
+# make her somebody's sister ("her sister", "patient's sister", "meri sister").
+_NURSE_BEFORE = _compile(
+    r"(?<![A-Za-z\u0900-\u097f])(?:ward|staff|duty|head|night|day|nursing|icu|nicu|ot|वार्ड|"
+    r"स्टाफ|ड्यूटी)(?:[ \t]+(?:ki|ka|ke|की|का|के))?[ \t]+$", re.IGNORECASE)
+_FAMILY_BEFORE = _compile(
+    r"(?:(?<![A-Za-z])(?:his|her|my|our|their|patient|pt\.?|uski|uska|unki|unka|iski|iska|"
+    r"meri|mera|hamari|apni|ki|ka|ke)|['’]s|(?<![\u0900-\u097f])(?:उसकी|उसका|उनकी|उनका|मेरी|"
+    r"मेरा|अपनी|की|का|के))[ \t]+$", re.IGNORECASE)
+
+# The word after a kinship word is a relative's name, in any case, unless it is an
+# ordinary or medical word ("beta lalrin ko bulaya", but not "beta ko bukhar").
+_HINDI_KIN = ("beta|beti|bete|bhai|bahu|bahan|behen|behan|pati|patni|chacha|chachi|mama|mami|"
+              "mausi|mausa|tau|tai|nana|nani|dada|dadi|damad|devar|jeth|nanad|bhabhi|bhatija|"
+              "bhatiji|bhanja|bhanji|pota|poti|putra|putri|"
+              "बेटा|बेटी|बेटे|भाई|बहू|बहन|पति|पत्नी|चाचा|चाची|मामा|मामी|मौसी|मौसा|ताऊ|ताई|नाना|"
+              "नानी|दादा|दादी|दामाद|देवर|जेठ|ननद|भाभी|भतीजा|भतीजी|भांजा|भांजी|पोता|पोती|"
+              "पुत्र|पुत्री")
+_ENGLISH_KIN = "son|daughter|brother|sister|husband|wife|father|mother"
+_KIN = _compile(
+    rf"(?<![A-Za-z\u0900-\u097f'’])(?:(?P<english>{_ENGLISH_KIN})|{_HINDI_KIN})"
+    r"(?![A-Za-z\u0900-\u097f'’])(?:[ \t]*[:\-–][ \t]*|[ \t]+)", re.IGNORECASE)
+# Kinship words that also follow a name as a form of address ("Imli bhai kal aaye").
+_ADDRESS_FORMS = HONORIFICS_LATIN | KINSHIP | _DEVA_HONORIFICS
+# Ordinary words often written after a kinship word; none of them is read as a name.
+_NOT_A_NAME = frozenset(unicodedata.normalize("NFKC", w) for w in """
+    chhota chhoti chhote chota choti chote bada badi bade bara bari sabse pehla pehli pahla
+    pahli dusra doosra dusri doosri teesra tisra akela akeli bimar bimaar beemar kamzor
+    kamjor khush dukhi pareshan swasth mota moti dubla patla lamba sundar shaitan ziddi
+    hoshiyar sust jawan sayana sayani padha anpadh pagal gunga behra andha viklang udas chup
+    shant gussa tension bhukha pyasa soya jaga zinda jinda mrit guzar gujar janm paida
+    garbhvati sharab sharabi daru daaru gutka tambaku bidi cigarette mazdoor mazdoori kisan
+    naukri padhai kaam dhandha dukan videsh yahan wahan idhar udhar sath saath alag shadi
+    shaadi vivahit avivahit kunwara kunwari dono teeno sirf kewal abhi turant zaroor jaroor
+    dekho dekhiye suno suniye bolo boliye bataiye jao jaiye aao aaiye lao laiye dijiye
+    lijiye kijiye chalo ruko likho bhejo please majdoori majduri majdur mazdur sheher shahar
+    ghabrahat garbh garbhwati ghayal chot gira giri paani mithai khata khati rota roti khelta
+    khelti cycle ration
+    alive expired died dead deceased healthy unwell well fit weak strong married unmarried
+    divorced widowed separated absent present informed delivered born accompanied living
+    staying studying working employed unemployed student farmer labourer driver teacher
+    housewife retired abroad aged anxious crying doing came brought coming going went
+    admitted discharged available waiting gave given suffering known occupation education
+    history name contact number mobile phone relation details address consent signature
+    side law elder younger eldest youngest only first second third one two three both none
+    बीमार कमज़ोर कमजोर खुश दुखी परेशान स्वस्थ छोटा छोटी बड़ा बड़ी पहला पहली दूसरा दूसरी अकेला
+    शराब शराबी दारू मज़दूर मजदूर मज़दूरी किसान नौकरी पढ़ाई काम बाहर विदेश शादी जीवित मृत
+    स्वर्गवासी यहाँ वहाँ पैदा गर्भवती देखो सुनो बोलो जाओ आओ लाओ चलो रुको सिर्फ़ सिर्फ दोनों
+    सभी अभी तुरंत
+""".split())
+# A lower-case word in neither name list is read as a name only when what follows it fits a
+# person: someone's action or a person marker, or (after a Hindi kinship word) a pause.
+# "ka", "ki" and "se" follow any noun, so alone they say nothing.
+_PERSON_FOLLOWS = _compile(
+    r"[ \t]+(?:ko|ne|ji|saath|sath|ke[ \t]+(?:saath|sath)|"
+    r"(?:ka|ki|ke)[ \t]+(?:naam|mobile|phone|number)|aaya|aayi|aaye|aya|ayi|aye|came|brought|"
+    r"informed|accompanied|attended|signed|called|reported|present|is|was|has|had|will|"
+    r"को|ने|जी|साथ|के[ \t]+साथ|(?:का|की|के)[ \t]+(?:नाम|मोबाइल|फोन)|आया|आयी|आई|आए|आये)"
+    r"(?![A-Za-z\u0900-\u097f])", re.IGNORECASE)
+_PAUSE_FOLLOWS = re.compile(r"[ \t]*(?:$|[\n\r.,;!?()\[\]|/\u0964\u2013\u2014-])")
+_INNER_CAPITAL = re.compile(r"[a-z][A-Z]")
+_KIN_PRIORITY = 64
 
 _ROLE_AFTER = _compile(
     r"[ \t]*\([ \t]*(?:attendant|relative|visitor|caller|witness|friend|neighbou?r|brother|"
@@ -122,6 +190,14 @@ _BEFORE_AGE = _compile(
 _PRE_PHONE_GAP = re.compile(
     r"(?i)^[ \t,;:\-–()]*(?:(?:mob(?:ile)?|ph(?:one)?|contact|no|number|call|on|at|मोबाइल|फोन)"
     r"\.?[ \t,;:\-–()]*){0,3}$")
+
+
+def _family_sister(text: str, position: int) -> bool:
+    """Is the "sister" at ``position`` somebody's sister rather than a nurse?"""
+    if text[position:position + 6].lower() != "sister":
+        return False
+    before = text[max(0, position - 20):position]
+    return bool(_FAMILY_BEFORE.search(before)) and not _NURSE_BEFORE.search(before)
 
 
 def _mention(tokens: Tokens, run: list[int], role: Role, priority: int, source: str) -> Mention:
@@ -177,6 +253,7 @@ class NameDetector:
         self._senders(tokens, found)
         self._phrases(tokens, found)
         self._honorifics(tokens, found)
+        self._kinship(tokens, found)
         found.extend(self.gazetteer(text, tokens))
         return found
 
@@ -269,6 +346,8 @@ class NameDetector:
                 (_STAFF_BEFORE, Role.STAFF, 81, "staff_role"),
                 (_TITLE, Role.UNKNOWN, 62, "title")):
             for m in pattern.finditer(text):
+                if pattern is _STAFF_BEFORE and _family_sister(text, m.start()):
+                    continue
                 run = _after(tokens, m.end())
                 if run:
                     found.append(_mention(tokens, run, role, priority, source))
@@ -312,6 +391,65 @@ class NameDetector:
             sender = word in KINSHIP and text[token.end:token.end + 1] == ":"
             role = Role.RELATIVE if sender else Role.PATIENT
             found.append(_mention(tokens, run, role, 68, "honorific"))
+
+    def _kinship(self, tokens: Tokens, found: list[Mention]) -> None:
+        text = tokens.text
+        for m in _KIN.finditer(text):
+            kin = m.group(0).rstrip(" \t:-–")
+            if kin.lower() in _ADDRESS_FORMS and self._follows_a_name(tokens, m.start()):
+                continue
+            index = tokens.index_at_or_after(m.end())
+            if index >= len(tokens) or tokens[index].start != m.end() \
+                    or not self._may_be_named(tokens, index):
+                continue
+            run = [index]
+            while run[-1] + 1 < len(tokens) and len(run) < MAX_NAME_TOKENS \
+                    and tokens.joined(run[-1], run[-1] + 1) \
+                    and self._may_be_named(tokens, run[-1] + 1) \
+                    and self._reads_as_name(tokens, run[-1] + 1):
+                run.append(run[-1] + 1)
+            end = tokens.span(run)[1]
+            if not (self._reads_as_name(tokens, index) or _PERSON_FOLLOWS.match(text, end)
+                    or not m.group("english") and _PAUSE_FOLLOWS.match(text, end)):
+                continue
+            role = Role.RELATIVE
+            if kin.lower() == "sister":
+                if _NURSE_BEFORE.search(text[max(0, m.start() - 20):m.start()]):
+                    role = Role.STAFF
+                elif not _family_sister(text, m.start()):
+                    if kin[0].isupper():
+                        continue                    # "Sister Imli": the staff rules
+                    role = Role.STAFF
+            found.append(_mention(tokens, run, role, _KIN_PRIORITY, "relation"))
+
+    def _follows_a_name(self, tokens: Tokens, position: int) -> bool:
+        """"Imli bhai": the word before makes the kinship word a form of address."""
+        index = tokens.index_ending_before(position)
+        if index < 0 or tokens.text[tokens[index].end:position] not in (" ", "-"):
+            return False
+        word = tokens[index].text
+        return not self.lexicon.is_stopword(word) \
+            and (tokens.is_candidate(index) or self.lexicon.is_known_name(word))
+
+    def _may_be_named(self, tokens: Tokens, index: int) -> bool:
+        """Is nothing known against this word being a name, whatever its case?"""
+        token, text = tokens[index], tokens.text
+        word = token.text
+        if len(word) < 3 or self.lexicon.is_stopword(word) or self.lexicon.is_medical(word) \
+                or self.lexicon.district(word) or token.lower in _NOT_A_NAME \
+                or token.lower in _ADDRESS_FORMS:
+            return False
+        if word.isascii() and (word.isupper() and len(word) <= 4
+                               or _INNER_CAPITAL.search(word)):
+            return False
+        return not (text[token.end:token.end + 1].isdigit()
+                    or text[max(0, token.start - 1):token.start].isdigit())
+
+    def _reads_as_name(self, tokens: Tokens, index: int) -> bool:
+        """A listed name, or a capitalised Latin word."""
+        token = tokens[index]
+        return self.lexicon.is_known_name(token.text) \
+            or not token.deva and token.text[0].isupper()
 
     def before_phone(self, text: str, phones: list[Mention],
                      tokens: Tokens) -> list[Mention]:

@@ -105,6 +105,63 @@ The constraint-first union-find already exists. These refine it.
 | T-53 | Split work across the two CPUs | Time at 8k files | Faster and still byte-identical | open |
 | T-54 | Run the detector twice (the document's two-pass design) | Not to be built | Rejected: roughly doubles runtime | rejected |
 
+## Fixes from an outside test set (Phase 15.5)
+
+An outside hand-written set, run once on the Phase 15 code, showed these families. Every fix was
+reproduced with new invented cases; that set is now tuned and was not used to measure them.
+"Fixed sets" are practice, its altered and scrambled copies and generator training seeds 1-6.
+
+| ID | Change to test | How to measure | Keep if | Status |
+|---|---|---|---|---|
+| T-97 | Type an unfamiliar column, key or form field as a hospital number when its values share one shape, are nearly unique per person and sit beside patient names | New remove/keep cases; fixed sets | Unknown numbers removed; claim, bill and specimen numbers kept | kept: new cases pass (18 of the family's 41 failed before); fixed sets unchanged |
+| T-98 | Read the token after any "number" label as an identifier unless it is a date, dose, result or code | Same | Same | kept, as above |
+| T-99 | A code repeated with one patient's name in two or more files is that patient's number; a value seen with two people never links | Same, plus shared ward and package codes | No new false merge | kept, as above |
+| T-100 | Never ask the name model about codes, units, short all-capital words or lab terms; hospital job titles are never a person | New cases; fixed sets; training sets with names in capitals | Lab words kept, no new leaks | kept: medical values kept +5 to +6 on 8 sets, leaks unchanged; names in capitals leaked 64 to 65. Rejected part: not counting a model-only name as making a record personal (no measured gain, could leave dates unshifted) |
+| T-101 | Read the word after a kinship word as a relative in any case, guarded against ordinary Hinglish; a nurse "sister" is staff | Name and ordinary-sentence cases; fixed sets | Relatives removed, medical and linking unchanged | kept: unit cases pass; fixed sets unchanged |
+| T-102 | Address fields keep only public parts; locality parts after a house number are removed in prose | Same | No private part left, districts and states kept | kept, as above |
+| T-103 | Learn the last private part of a combined address cell and search other files for it | Same | Village gone elsewhere, generic phrases not learned | kept, as above |
+| T-104 | Search file names for every patient name part, any case, both scripts | Same | Names gone, ordinary file names unchanged | kept, as above |
+| T-105 | Joined and split given names are one name | Merge and never-merge pairs; fixed sets | No false merge | kept: 30 of the family's 61 new cases failed before; no wrong merge on any fixed set |
+| T-106 | A patient's registered phone plus a compatible name links a note; two fitting patients: abstain | Same | No false merge | kept, as above |
+| T-107 | Records of one file that share a specimen or visit number, or name, age and sex, share a pseudonym and date shift; thin ties are not claimed in `records.jsonl` | Same | One shift per specimen; homonyms apart | kept, as above |
+
+## Encryption at rest (Phase 20.1)
+
+| ID | Change to test | How to measure | Keep if | Status |
+|---|---|---|---|---|
+| T-108 | Stage files only as AES-GCM ciphertext; publish by decrypting audited files and renaming, report last; clean up on every exit | Inspect the stage during the audit; tamper and swap files; stop and kill the run | No plaintext staged; leftovers only ciphertext | kept |
+| T-109 | Optional sealed input with a data key per file and keyed file names | Sealed and plain runs on the same input; wrong secret; damaged folder | Identical release; nothing plain written | kept |
+| T-110 | Optional encrypted copy of quarantined files, off by default | Contents and names of the folder; opening it | Only the secret holder can read it | kept, off by default |
+
+## Attack replay calibration and experiments (Phase 16)
+
+| ID | Change to test | How to measure | Keep if | Status |
+|---|---|---|---|---|
+| T-111 | Make the replay read the raw practice input as the organisers' attacker does | `tools/calibrate_attacker.py` against `dev/truth/raw_attack.json` | Scored readings within 0.05, signal hits within 2 | kept: all scored readings within; two unscored ones differ by 0.06 and 0.07 |
+| T-112 | Break the targeted attack down by signal | `tools/tune.py --targets`, 10 secrets | Names the signal to work on | done: condition with hospital 74 %, stay with hospital 24 %, date 1 % |
+| T-80 | Location generalised beyond district (division or none) | Upper bound: blank every district name in the release, 10 secrets | Score rises | rejected: A2-A5 unchanged (0.247, 0.234, 0.570), utility down, score 38.21 to 38.06 |
+| T-81 | Suppress diagnoses held by up to 2 or 3 patients | 10 secrets | Score rises | rejected: targeted attack unchanged; score 37.90 and 37.71 against 38.21 |
+| T-82 | Suppress rare procedures and billing package codes | Replay | Score rises | deferred: neither the replay nor the published attack uses a procedure signal, so it cannot be measured |
+| T-83 | Remove hospital names from records | Targeted success with the hospital signal ignored | Success falls | rejected: success unchanged at 0.570 without the signal |
+| T-113 | Re-check the privacy settings on 500 invented patients and a 2,500-person register | `tools/scale_attack_data.py`, 10 secrets, rules only | Same settings still win | held: no alternative scored higher; risks are so low there that most settings tie |
+
+## Found on a blind dataset (Phase 22)
+
+| ID | Change to test | How to measure | Keep if | Status |
+|---|---|---|---|---|
+| T-114 | A note sharing a phone with several record sets is left aside only if they name different people (part of T-106) | New test with invented data; all fixed sets | No false merge anywhere | kept: the first blind run had one false merge from the earlier rule (precision 0.998, recall 0.534); after the fix 1.000 and 0.547; every other set unchanged |
+| T-115 | Remove a given name that is also an ordinary word (found as one name left visible on the blind set) | New remove/keep cases; fixed sets | Name removed, ordinary sentences unchanged | open |
+
+## Found on a second outside set
+
+| ID | Change to test | How to measure | Keep if | Status |
+|---|---|---|---|---|
+| T-116 | One separator class for identifier parts, so a number learned with `:`, `#`, `|` or brackets is found again; a date or time inside a learned number is part of it | New invented tests; all fixed sets | Tests pass, every fixed set no worse | kept: every fixed set unchanged |
+| T-117 | Degrees written as degrees, and the name they follow, are never treated as a patient or relative name | New remove/keep tests (shared given name; "Md" as a name); all fixed sets | Doctor lines unchanged, the name form "Md" still removed, fixed sets no worse | kept: every fixed set unchanged |
+| T-118 | Words between a dosage form and a dose, unit, frequency or route are the medicine; social-history words join the medical list | New invented tests with unlisted medicine names; all fixed sets | Medicine kept, a name with no dose after the form still removed, fixed sets no worse | kept: every fixed set unchanged |
+| T-119 | A name under a relation key, or beside a kinship word in a nested object, is a relative's, with no name-list check | New invented single-word names under every container word; all fixed sets | Name removed, the patient still gets a pseudonym, fixed sets no worse | kept: also cures a patient left as `[NAME]` and unlinked when the same object held an unlisted relative |
+| T-120 | A key that says patient names the patient whatever object holds it | New tests over container names; all fixed sets | Same record gives the same pseudonym under any container | kept: under staff, contact and guardian containers the key was typed as that person; the unlinked-record symptom itself came from T-119's cause |
+
 ## Questions to settle by measurement
 
 | ID | Question | Why it matters | Status |
@@ -113,4 +170,4 @@ The constraint-first union-find already exists. These refine it.
 | Q-02 | How large are the hidden datasets compared with the roughly 240 MB where memory would run out? | Decides how urgent T-50 to T-52 are | open (ask organisers) |
 | Q-03 | Does the scorer inspect a leftover staging folder, and how does it treat a non-zero exit? | Decides failure behaviour | open (ask organisers) |
 | Q-04 | How much of the drop on unseen formats can label-free cues recover? | Ranks detection work | partly answered: scrambling labels and cues leaks 3 of 3230 on practice data and 11 (2 canaries) on the hard copy; the ablation gives each family's effect. Names that appear once in unfamiliar wording are the remaining gap |
-| Q-05 | How accurate is our attack replay compared with the real attacker? | Limits how far to trust privacy tuning | partly answered: matches on A4 and A5 for raw input; A2/A3 reads low |
+| Q-05 | How accurate is our attack replay compared with the real attacker? | Limits how far to trust privacy tuning | answered for the scored readings: within 0.05 of the organisers on raw input (T-111) |

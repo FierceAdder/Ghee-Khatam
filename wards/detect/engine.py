@@ -68,7 +68,11 @@ def resolve(mentions: Iterable[Mention], text: str) -> list[Mention]:
                                  priority=strong.priority, source=strong.source, data=strong.data)
         else:
             merged.append(mention)
-    others = [m for m in mentions if m.etype not in NAME_TYPES]
+    # "25:11" inside a learned number is part of that number, not a time or a date
+    learned = [m for m in mentions if m.source == "known" and m.etype in _LEARNED_NUMBERS]
+    others = [m for m in mentions if m.etype not in NAME_TYPES
+              and not (m.etype in _WHOLE_ONLY
+                       and any(n.start <= m.start and m.end <= n.end for n in learned))]
     ordered = sorted(merged + others,
                      key=lambda m: (-m.priority, -(m.end - m.start), m.start, m.etype.value))
     accepted: list[Mention] = []
@@ -86,6 +90,7 @@ def resolve(mentions: Iterable[Mention], text: str) -> list[Mention]:
 # A date or age means nothing in part: its replacement is computed from the whole value.
 _WHOLE_ONLY = frozenset({E.DATE, E.DOB, E.AGE})
 _MIN_LEFTOVER_DIGITS = 3
+_LEARNED_NUMBERS = frozenset({E.MRN, E.INSURANCE_ID, E.OTHER_ID})
 
 
 def _leftovers(mention: Mention, covering: list[Mention], text: str) -> list[Mention]:

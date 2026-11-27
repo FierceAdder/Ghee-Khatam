@@ -20,13 +20,17 @@ import sys
 import threading
 import time
 import warnings
-from collections.abc import Mapping
+from collections.abc import Iterator, Mapping
+from contextlib import contextmanager
 from typing import TextIO
 
 from wards import logschema
 from wards.errors import ConfigError
 
 SECRET_ENV = "RAKSHA_SECRET"
+# Signals that ask the run to stop. SIGKILL cannot be caught: see wards/release.py.
+_STOP_SIGNALS = tuple(getattr(signal, name) for name in
+                      ("SIGTERM", "SIGINT", "SIGHUP", "SIGQUIT") if hasattr(signal, name))
 
 _SAFE_TOKEN = re.compile(r"^[A-Za-z_][A-Za-z0-9_.]{0,63}$")
 _HEX_PREFIX = re.compile(r"^[0-9a-f]{1,16}$")
@@ -176,7 +180,7 @@ def _checked_token(value: str) -> str:
 
 
 class Terminated(BaseException):
-    """The run was asked to stop (SIGTERM); staged files must still be removed."""
+    """The run was asked to stop (a signal); staged files must still be removed."""
 
 
 def harden_process() -> None:
@@ -189,11 +193,32 @@ def harden_process() -> None:
     sys.excepthook = _hook
     _disable_core_dumps()
     if threading.current_thread() is threading.main_thread():
-        signal.signal(signal.SIGTERM, _terminate)
+        for number in _STOP_SIGNALS:
+            if number == signal.SIGINT:
+                continue                       # already raises KeyboardInterrupt
+            if number == signal.SIGTERM or signal.getsignal(number) is signal.SIG_DFL:
+                signal.signal(number, _terminate)      # an ignored SIGHUP stays ignored
 
 
 def _terminate(_signum, _frame) -> None:
+    for number in _STOP_SIGNALS:               # a second signal must not cut the clean-up
+        signal.signal(number, signal.SIG_IGN)
     raise Terminated()
+
+
+@contextmanager
+def uninterrupted() -> Iterator[None]:
+    """Finish a clean-up even if a stop signal arrives while it runs."""
+    if threading.current_thread() is not threading.main_thread():
+        yield                                  # signals are delivered to the main thread
+        return
+    previous = [(number, signal.signal(number, signal.SIG_IGN)) for number in _STOP_SIGNALS]
+    try:
+        yield
+    finally:
+        for number, handler in previous:
+            if handler is not None:
+                signal.signal(number, handler)
 
 
 def _disable_core_dumps() -> None:

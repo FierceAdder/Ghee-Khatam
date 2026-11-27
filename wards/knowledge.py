@@ -12,11 +12,21 @@ import re
 from collections import Counter, defaultdict
 from collections.abc import Iterable
 
+from wards.detect.address import LAST_PLACE, AddressDetector
 from wards.lexicon import District, Lexicon
 from wards.model import CLIPPED, Channel, Document, Mention, Record, Segment
 from wards.model import EntityType as E
 from wards.model import FieldType as F
-from wards.normalize import digits_only, id_key, is_devanagari, phone_key, skeleton, transliterate
+from wards.normalize import (
+    ID_GAP,
+    ID_SEPARATOR,
+    digits_only,
+    id_key,
+    is_devanagari,
+    phone_key,
+    skeleton,
+    transliterate,
+)
 
 _SWEEP_PRIORITY = 91
 _ID_PARTS = re.compile(r"[A-Za-z]+|\d+|[^A-Za-z\d]+")
@@ -26,6 +36,12 @@ _MAILBOX = re.compile(r"[\w.+\-]+@[\w.\-]+\w")
 _LONG_DIGITS = re.compile(r"(?<!\d)\d{5,}(?!\d)")
 _DIGIT_TYPES = (E.AADHAAR, E.ABHA_NUMBER, E.PHONE)
 _SHAPED_TYPES = (E.MRN, E.INSURANCE_ID)
+# A known number is found whatever separates its parts ("TQV/R/3318" in "tqv_r_3318.txt").
+_CHUNK = re.compile(r"[A-Za-z0-9]+")
+_NUMBER_GAP = re.compile(rf"^{ID_GAP}$")
+_MAX_CHUNKS = 7
+_SHORT_CORE = re.compile(r"(?<!\d)\d{4}(?!\d)")
+_YEAR = re.compile(r"(?:19|20)\d\d$")
 
 
 def place_key(text: str) -> str:
@@ -35,7 +51,7 @@ def place_key(text: str) -> str:
     return "".join(parts)
 
 
-def id_shape(value: str) -> str | None:
+def id_shape(value: str, min_digits: int = 5) -> str | None:
     """A regex for identifiers that look like ``value``: letters literal, digits counted."""
     pieces, letters, digits = [], 0, 0
     parts = _ID_PARTS.findall(value.strip())
@@ -46,12 +62,12 @@ def id_shape(value: str) -> str | None:
         elif part.isdigit():
             pieces.append(rf"\d{{{len(part)}}}")
             digits += len(part)
-        elif re.fullmatch(r"[ \t/\-_.]{1,2}", part):
-            pieces.append(r"[ /\-_.]?")
+        elif re.fullmatch(ID_GAP, part):
+            pieces.append(rf"{ID_SEPARATOR}{{0,3}}")
         else:
             return None
     # Without a letter prefix the shape would match any lab value of the same length.
-    if not 2 <= letters <= 12 or digits < 5 or not parts[0].isalpha():
+    if not 2 <= letters <= 12 or digits < min_digits or not parts[0].isalpha():
         return None
     return "".join(pieces)
 
@@ -59,10 +75,13 @@ def id_shape(value: str) -> str | None:
 class Knowledge:
     def __init__(self, lexicon: Lexicon) -> None:
         self.lexicon = lexicon
+        self.address = AddressDetector(lexicon)
         self.shapes: dict[str, E] = {}
         self.id_values: dict[str, E] = {}
         self.digit_values: dict[str, E] = {}
         self.digit_cores: set[str] = set()
+        self.short_cores: set[str] = set()              # four digits: file names only
+        self.numbers: dict[str, E] = {}                 # one person's numbers, by id_key
         self.villages: dict[str, str] = {}              # casefolded surface -> surface
         self.village_districts: dict[str, Counter] = defaultdict(Counter)
         self._shape_regex: re.Pattern[str] | None = None
@@ -71,6 +90,16 @@ class Knowledge:
     # ------------------------------------------------------------------ learning
 
     def learn(self, docs: Iterable[Document]) -> None:
+        # imported here: wards.anchors reads names as linking does, and linking uses this file
+        from wards import anchors
+
+        docs = list(docs)
+        sightings = anchors.Sightings(docs, self.lexicon)
+        anchors.demote_shared(sightings)
+        for value, etype in anchors.declared_numbers(sightings):
+            self._learn_number(value, etype)
+        for value in anchors.field_numbers(sightings) + anchors.repeated_numbers(sightings):
+            self._learn_number(value, E.MRN, anchored=True)
         for doc in docs:
             for segment in doc.segments:
                 for mention in segment.mentions:
@@ -105,10 +134,40 @@ class Knowledge:
             self.id_values.setdefault(value.upper(), E.PAN)
         elif mention.etype in (E.EMAIL, E.ABHA_ADDRESS):
             self.id_values.setdefault(value.lower(), mention.etype)
-        elif mention.etype is E.VILLAGE and len(value) >= 4 \
-                and not self.lexicon.district(value) \
+        elif mention.etype in (E.VILLAGE, E.LOCALITY):
+            self._learn_village(mention, value)
+
+    def _learn_village(self, mention: Mention, value: str) -> None:
+        """Villages to search for everywhere; from a combined cell, also its last private
+        part."""
+        places = []
+        if mention.etype is E.VILLAGE \
                 and not any(self.lexicon.is_stopword(w) for w in value.split()):
-            self.villages.setdefault(value.casefold(), value)
+            places.append(value)
+        if "," in value:
+            places.append(self.address.village_in(value))
+        elif mention.data == LAST_PLACE:
+            places.append(value)
+        for place in places:
+            if place and len(place) >= 4 and not self.lexicon.district(place):
+                self.villages.setdefault(place.casefold(), place)
+
+    def _learn_number(self, value: str, etype: E, anchored: bool = False) -> None:
+        """A number to look for in every file, key and file name."""
+        key = id_key(value)
+        letters = sum(c.isalpha() for c in key)
+        # short or bare numbers could be anything elsewhere
+        if len(key) >= (5 if anchored else 6) and (letters or len(key) >= (6 if anchored else 7)):
+            self.numbers.setdefault(key, etype)
+        if etype is not E.MRN:
+            return
+        runs = [r for r in re.findall(r"\d{4,}", value) if not _YEAR.match(r)]
+        if runs:
+            (self.digit_cores if len(runs[-1]) >= 5 else self.short_cores).add(runs[-1])
+        # a prefix of three letters or more is telling enough to find its other numbers
+        shape = id_shape(value, min_digits=4) if anchored and letters >= 3 else None
+        if shape:
+            self.shapes.setdefault(shape, etype)
 
     def _learn_places(self, record: Record) -> None:
         villages = [m.value for _, m in record.mentions() if m.etype is E.VILLAGE]
@@ -169,6 +228,13 @@ class Knowledge:
         if self._shape_regex is not None:
             for m in self._shape_regex.finditer(text):
                 add(self._shape_type(m.group(0)), m.start(), m.end())
+        for start, end, etype in self._known_numbers(text):
+            # a number of unknown kind yields to any rule that knows what it is
+            add(etype, start, end, _SWEEP_PRIORITY if etype is E.MRN else 58)
+        if segment.field is F.PATH:
+            for m in _SHORT_CORE.finditer(text):
+                if m.group(0) in self.short_cores:
+                    add(E.MRN, m.start(), m.end(), 59)
         for m in _DIGIT_GROUPS.finditer(text):
             digits = digits_only(m.group(0))
             etype = self.digit_values.get(digits)
@@ -193,6 +259,28 @@ class Knowledge:
             for m in self._village_regex.finditer(text):
                 add(E.VILLAGE, m.start(), m.end(), 54)
         return found
+
+    def _known_numbers(self, text: str) -> Iterable[tuple[int, int, E]]:
+        """The longest run of parts at each place that spells a known number."""
+        if not self.numbers or not any(c.isdigit() for c in text):
+            return
+        chunks = list(_CHUNK.finditer(text))
+        taken = 0
+        for first, chunk in enumerate(chunks):
+            if chunk.start() < taken:
+                continue
+            key, hit = "", None
+            for last in range(first, min(first + _MAX_CHUNKS, len(chunks))):
+                if last > first and not _NUMBER_GAP.match(
+                        text[chunks[last - 1].end():chunks[last].start()]):
+                    break
+                key += chunks[last].group(0).upper()
+                # bare digits split by marks are a date or a result, not the number
+                if key in self.numbers and (last == first or not key.isdigit()):
+                    hit = chunks[last].end(), self.numbers[key]
+            if hit:
+                taken = hit[0]
+                yield chunk.start(), hit[0], hit[1]
 
     def _shape_type(self, value: str) -> E:
         known = self.id_values.get(id_key(value))

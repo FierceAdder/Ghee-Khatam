@@ -16,7 +16,7 @@ from dataclasses import dataclass
 
 from wards import jsonio
 from wards.columns import (classify_fhir, classify_json_key, classify_label, context_of,
-                           infer_from_values, is_schema_label, type_columns)
+                           infer_from_values, is_relative_entry, is_schema_label, type_columns)
 from wards.errors import QuarantineError
 from wards.ingest import InputFile
 from wards.lexicon import Lexicon
@@ -277,6 +277,8 @@ class _Builder:
     def _field(self, keys: tuple[str, ...], resource: str, siblings: dict) -> F:
         if self.doc.kind is DocKind.FHIR:
             return classify_fhir(keys, resource, siblings)
+        if is_relative_entry(keys, siblings):
+            return F.RELATIVE_NAME
         kind = classify_json_key(keys)
         return self.hints.get(keys, kind) if kind in _OPEN_FIELDS else kind
 

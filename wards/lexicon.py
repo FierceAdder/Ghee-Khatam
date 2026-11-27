@@ -38,6 +38,27 @@ KINSHIP = frozenset({
     "tau", "tai", "jiju", "behen", "bahen", "didi",
 })
 
+# Jobs in a hospital. On their own, or beside a department word, they name nobody: a role
+# is never a patient or a relative.
+ROLE_WORDS = frozenset({
+    "assistant", "assistants", "asst", "attendant", "attendants", "boy", "wardboy", "aaya",
+    "helper", "orderly", "staff", "sister", "sisters", "nurse", "nurses",
+    "technician", "technicians", "technologist", "tech", "pharmacist", "compounder",
+    "kampounder", "dresser", "sweeper", "peon", "chaprasi", "receptionist", "counsellor",
+    "counselor", "operator", "phlebotomist", "radiographer", "paramedic", "midwife",
+    "supervisor", "incharge", "intern", "interns", "karmachari", "karamchari",
+    "karmchari", "paricharak", "paricharika",
+    "कर्मचारी", "परिचारक", "परिचारिका", "कंपाउंडर", "कम्पाउंडर", "चपरासी", "बॉय",
+    "वार्डबॉय", "टेक्नीशियन", "तकनीशियन", "असिस्टेंट", "अटेंडेंट", "स्टाफ", "सिस्टर", "नर्स",
+    "फार्मासिस्ट",
+})
+# Words that say where such a job is done ("Lab Assistant", "ward boy").
+DEPARTMENT_WORDS = frozenset({
+    "lab", "laboratory", "ward", "office", "hospital", "nursing", "duty", "head", "night",
+    "day", "ot", "icu", "nicu", "opd", "ipd", "xray", "pharmacy",
+    "लैब", "वार्ड", "ड्यूटी", "अस्पताल",
+})
+
 
 def loose_spelling(latin: str) -> str:
     """Spelling with the vowels Hindi writing leaves unstable removed.

@@ -4,9 +4,10 @@ An offline, CPU-only, LLM-free firewall that cleans a folder of hospital records
 Hindi and Hinglish. It removes personal data, keeps medical values exactly, gives each
 patient one keyed pseudonym across files, and quarantines whatever it cannot clean.
 
-- **Few dependencies.** Python 3.10+; the rules use the standard library only. The learned
-  name check needs onnxruntime, sentencepiece and numpy (`requirements.txt`); without them
-  the firewall runs on its rules alone and the log says so.
+- **Few dependencies.** Python 3.10+; the rules use the standard library only. Encryption
+  needs `cryptography` (required: without it the firewall refuses to start). The learned
+  name check needs onnxruntime, sentencepiece and numpy; without them the firewall runs on
+  its rules alone and the log says so. All are in `requirements.txt`.
 - **One small model, declared below.** No LLM, nothing generative, nothing downloaded at
   run time.
 - **Deterministic.** Same input and `RAKSHA_SECRET` give byte-identical output.
@@ -58,6 +59,19 @@ make test-local PYTHON=.venv/bin/python
 make check                                        # organisers' pre-submit check
 ```
 
+### Encrypted input (optional)
+
+```bash
+RAKSHA_SECRET=... python3 tools/seal.py --in records/ --out sealed/       # or: make seal
+RAKSHA_SECRET=... python3 main.py --sealed sealed/ --output release/      # or: make run-sealed
+```
+
+The sealed folder shows neither contents nor file names, is decrypted in memory only, and
+gives the same `sanitized/` and `records.jsonl` as a plain run with the same secret.
+`--encrypt-quarantine` also keeps an encrypted copy of each quarantined file in
+`<output>/quarantine` (off by default); `tools/seal.py --open-quarantine` reads them back
+into a folder you choose.
+
 The output folder must not already contain a release. Exit codes: `0` release complete,
 `2` could not start (bad arguments, missing secret, bad policy), `1` unexpected failure.
 
@@ -96,7 +110,7 @@ invented patient through every stage below, showing the real output of each;
         |
    [ verify ]  stage, re-read, check structure; fail -> quarantine
         |
-   [ publish]  atomic renames, report last
+   [ publish]  decrypt audited files, rename into place, report last
         |
  output/  sanitized/   records.jsonl   report.json
 ```
@@ -140,11 +154,19 @@ run.
   run without it is refused.
 - Logs carry only counts, values from fixed lists, exception class names and digests
   (see "Run log").
-- No temporary files outside the output folder; only redacted bytes are ever written.
-  Input is opened read-only. Core dumps are disabled.
-- Raw values and the pseudonym map exist only in process memory, so there is no
-  intermediate file to encrypt and **no encryption at rest is implemented**. Keep input
-  and output on encrypted storage, and disable swap or encrypt it.
+- **Encryption at rest** (AES-256-GCM, `wards/crypto.py`). Files waiting for the audit in
+  `output/.stage` are on disk only as ciphertext, bound to their path, under a key that
+  exists only in the running process. Optional sealed input and quarantine use a data key
+  per file, wrapped by a key derived from `RAKSHA_SECRET` (HKDF and scrypt). No key is
+  written anywhere; keep the secret apart from the data.
+- **Threat covered:** a copy of the output folder taken at any moment of a run holds only
+  ciphertext and files that already passed the audit. The staging folder and half-written
+  files are removed on success, failure and stop signals; after a forced kill they remain
+  as ciphertext until the next run clears them.
+- **Not covered:** raw values and the pseudonym map exist in process memory during a run,
+  so disable swap or encrypt it (core dumps are disabled). A plain input folder is only
+  read; it stays as protected as the storage it is on unless you seal it.
+- No temporary files outside the output folder. Input is opened read-only.
 - A failure in one file quarantines that file. A failure in a dataset-wide stage (or
   `SIGTERM`, or an out-of-memory error) removes everything staged, writes a report marked
   `"status": "failed"` and exits non-zero. A forced kill cannot be handled; because
@@ -211,20 +233,25 @@ generated data only.
 
 ## Measured results
 
-Practice data, `check_dev.py` and our own tools, 26 Nov 2026. Not the official score.
+Practice data, `check_dev.py` and our own tools, 27 Nov 2026. Not the official score.
 
 | Measure | Value |
 |---|---|
 | Personal data still visible | 0 of 3,230 pieces (English, Hindi and Hinglish) |
 | Planted canaries found in the output | 0 of 4 |
-| Medical values kept | 99.0 % (five one-patient diagnoses removed on purpose; a few words taken for names by the learned check) |
+| Medical values kept | 99.1 % (five one-patient diagnoses removed on purpose) |
 | Linking precision / recall / F0.5 | 1.00 / 1.00 / 1.00 |
-| Intervals between a patient's events | 100 % exact |
-| Records still revealing a birth year | 0 of 111 |
-| Time, peak memory (200 files), Docker on 2 CPUs | 26.6 s, 334 MB (1.7 s and 67 MB without the learned check) |
-| 2,000 files, copies of the practice data, Docker on 2 CPUs | 30 s, 497 MB (repeated lines are scored once) |
-| Unique generated files, Docker on 2 CPUs | about 0.17 s per file |
+| Attack replay, relative to raw input (10 secrets) | direct 0, record linkage 0.25, profile 0.23, targeted 0.57 |
+| Time, peak memory (200 files), Docker on 2 CPUs | 12.2 s, 341 MB |
+| 2,000 files, copies of the practice data (measured at Phase 15) | 30 s, 497 MB |
 | Same secret twice; Docker against macOS | byte-identical output |
+
+On data not used for tuning:
+
+| Data | Leaked | Medical kept | Linking P / R |
+|---|---|---|---|
+| Held-out test seeds 7-9, run once | 1.4-1.9 %, no critical identifier, no canary | 99.1-100 % | 0.92-0.95 / 0.66-0.72, one false merge each |
+| Blind set, 2,419 files, first run | structured identifiers 0; one given name that is also a word left visible | medicines, doses, BP all; diagnoses 99.0 % | 0.998 / 0.534 (1.000 / 0.547 after fixing the false merge) |
 
 Altered copies, results on wording the first version had not seen, and the attack replay
 are in [SCORES.md](SCORES.md).
@@ -270,11 +297,21 @@ changes still to be tried are in [docs/CHANGES_TO_TEST.md](docs/CHANGES_TO_TEST.
 
 ## Known limitations
 
+- **Not built:** Phases 17-19 (further linking work, a runtime swap test and the open detection
+  items) were planned and are not implemented.
+- A second outside test set showed five defects (separators inside hospital numbers, a doctor's
+  degree replaced, unlisted medicine names removed, names in relation objects, patient-name
+  keys). They are fixed and tested with new invented data; that set was not run again, and the
+  held-out and blind-set figures above were measured before these fixes.
 - Rules were written while reading the practice data, and the altered copies reuse its
   document layouts. Results on really new formats will be worse than those above: the
   first run on unfamiliar wording leaked 7.4 % before the fixes it prompted, and some of
   those fixes added that copy's own words. With labels scrambled on top of new names, names
   that appear only once in free text still leak: 2 of 4 canaries survived (see SCORES.md).
+- **Linking on unfamiliar layouts is the weakest part:** each of the three final test sets has
+  one false merge, and recall there is 0.66 to 0.72.
+- A given name that is also an ordinary word can stay visible, even in a name column.
+- Names written all in capitals in free text are often missed.
 - A name in free text with no label, relation, honorific or similar context, that is in no
   gazetteer and appears nowhere else in the dataset, is missed unless the learned name check
   is on. With IndicBERT on, names leaked on the held-out test side fell from 7-14 to 0-1 per
@@ -283,8 +320,9 @@ changes still to be tried are in [docs/CHANGES_TO_TEST.md](docs/CHANGES_TO_TEST.
 - Typing fields by their values can over-redact: capitalised phrases in an unfamiliar
   column beside identifiers may be taken for names, and a column of dates spread over ten
   years or more for birth dates.
-- The targeted attack still succeeds 45 to 53 % of the time on practice data, depending on
-  the secret: diagnoses shared by two or three patients are kept for research value.
+- The targeted attack still succeeds 57 % of the time on practice data (calibrated attack
+  replay, 10 secrets): few patients share a target's sex and age, so a kept diagnosis or the
+  exact length of stay can single one out.
 - The privacy settings were chosen on a practice set of 48 patients. The age-band rule
   adapts to larger data, but that behaviour has not been tested against a real registry.
 - Birth dates are removed so they cannot undo the age bands. This gives up the utility

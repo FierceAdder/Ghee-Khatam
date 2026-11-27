@@ -6,8 +6,18 @@
 Follows ``docs/ATTACKS.md``: record linkage against the registry (A2/A3), pooled profiles
 (A4), targeted attack with global-shift recovery (A5), plus direct exposure (A1),
 pseudonym inversion (A6) and cross-release linkage (A7). The real attacker's code is not
-published, so details here are our reading of the document: treat results as estimates and
-compare builds with them.
+published, so details here are our reading of the document. ``calibrate_attacker.py``
+compares that reading with the organisers' result on the raw practice input; where the
+document is silent, the reading that agrees with their numbers is used:
+
+* a record's risk is the larger of its own and its profile's (A2/A3 uses the A4 rule:
+  records holding nothing but a name could not otherwise reach the published level);
+* only structured patient-identifier fields join records (their number of profiles);
+* a condition is recognised by its English disease name; ``--codes`` also reads ICD
+  codes and Hindi names, a stronger attacker than the published one appears to be;
+* a signal is counted as a hit only on profiles consistent with the targeted person.
+
+Treat results as estimates and compare builds with them.
 """
 
 from __future__ import annotations
@@ -21,27 +31,29 @@ from collections import Counter, defaultdict
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from eval_stage import entity_keys, norm, occurrences, with_payloads
+from eval_stage import entity_keys, norm, occurrences, pointer, with_payloads
 from utility import Release, default_truth, estimate
 
 from wards.dates import DMY, MDY, find_dates
-from wards.detect.tokens import Tokens
 from wards.knowledge import place_key
 from wards.lexicon import Lexicon
 from wards.textview import TextView
-from wards.veto import Veto
 
 WEIGHTS = {"A1": 0.20, "A2/A3": 0.20, "A4": 0.20, "A5": 0.20, "A6": 0.10, "A7": 0.10}
 REFERENCE_YEAR = 2026
 
 _PSEUDONYM = re.compile(r"PSN-[0-9A-Z]{6}")
-_REFERENCE_ID = re.compile(r"(?<![A-Za-z0-9])[A-Z]{2,8}(?:[\-/]?[A-Z]{2,5})?[\-/]?\d{0,4}[\-/]?"
-                           r"\d{5,}(?![A-Za-z0-9])")
+# The "shared reference values (patient_ref, uhid, ...)" that join records: structured fields
+# whose name is a patient identifier. Letters only, lower case ("PatientID" -> "patientid").
+_REFERENCE_FIELD = re.compile(r"uhid|patientref|patientid")
 _PHONE = re.compile(r"(?<!\d)(?:\+?91[ \-]?|0)?([6-9]\d{2,4}[ \-]?\d{2,3}[ \-]?\d{3,5})(?!\d)")
 _MASKED_PHONE = re.compile(r"(?<![A-Za-z0-9])([6-9]\d[Xx*]{4,6}\d{2,4})")
 _LAST4 = re.compile(r"(?i)(?:[x*]{4}[ \-]?){2}(\d{4})(?!\d)")
-_AADHAAR = re.compile(r"(?<!\d)\d{4}[ \-]?\d{4}[ \-]?(\d{4})(?!\d)")
+# Exactly twelve digits: the tail of a longer number (a 14-digit ABHA) is not an Aadhaar.
+_AADHAAR = re.compile(r"(?<![\d+])(?<!\d[ \-])\d{4}[ \-]?\d{4}[ \-]?(\d{4})(?![ \-]?\d)")
 _EMAIL = re.compile(r"[\w.+\-]+@[\w\-]+\.[\w.]+")
+# The digit groups of a resource identifier are not a phone or Aadhaar number.
+_UUID = re.compile(r"(?i)(?<![0-9a-f])[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}(?![0-9a-f])")
 _AGE = (
     re.compile(r"(?i)(?<![a-z])(?:age(?:[ _]?(?:sex|years))?|umar|ageyears|आयु|उम्र)[\"']?\s*[:=]\s*"
                r"[\"']?(\d{1,3}(?:\s*-\s*\d{1,3}|\+)?)"),
@@ -49,9 +61,14 @@ _AGE = (
                r"(?:M|F|Male|Female|male|female|पुरुष|महिला)(?![A-Za-z])"),
     re.compile(r"(?<![\d./\-])(\d{1,3}(?:-\d{1,3}|\+)?)\s*(?:yrs?|Yrs|वर्ष)(?=\s*[,/]?\s*"
                r"(?:male|female|महिला|पुरुष))"),
+    # "52 वर्ष" on its own, but not a duration ("x 8 वर्ष", "8 वर्ष से", "पिछले 8 वर्ष")
+    re.compile(r"(?<![\d./\-])(?<![x×] )(?<![x×])(?<!पिछले )(\d{1,3}(?:-\d{1,3}|\+)?)\s*वर्ष"
+               r"(?!\s*(?:से|पहले|पूर्व|तक|पुरान|की अवधि))(?![\u0900-\u097f])"),
 )
+# Half-open bands such as "[50,60)".
+_AGE_INTERVAL = re.compile(r"\[\s*(\d{1,3})\s*,\s*(\d{1,3})\s*\)")
 _BIRTH = re.compile(r"(?i)(?:dob|birth[ _]?date|janm[^:|]{0,8}|जन्म[^:|]{0,10})[^:\"|]{0,18}"
-                    r"[\"']?\s*[:|]\s*[\"']?([0-9][0-9\-/.]{7,9})")
+                    r"[\"']?\s*[:|]\s*[\"']?([0-9][0-9\-/.]{7,9}|(?:19|20)\d\d(?![0-9\-/.]))")
 _MALE = re.compile(r"(?i)(?:/\s*m(?![a-z])|\bmale\b|पुरुष|(?<![a-z/])s/o\b|\bsahab\b|\bbhai\b"
                    r"|(?:gender|sex|ling)[\"']?\s*[:|]\s*[\"']?m(?![a-z]))")
 _FEMALE = re.compile(r"(?i)(?:/\s*f(?![a-z])|\bfemale\b|महिला|(?<![a-z/])[dw]/o\b|\bbehenji\b|"
@@ -69,10 +86,21 @@ _PIN = re.compile(r"(?i)(?:(?:pin(?:[ _]?code)?|zip|postalcode|पिन(?: क�
                   r"([1-9]\d{5}|[1-9]\d{2}\*{3})(?![\d*])")
 _PIN_MASKED = re.compile(r"(?<![\d])([1-9]\d{2}\*{3})(?![\d*])")
 _HOUSE = re.compile(r"(?i)(?:h\.?\s*no\.?|house|makan(?:\s*no\.?)?|मकान\s*नं\.?)\s*[:#\-]?\s*(\d+)")
-_RELATIVE_CUE = re.compile(r"(?i)(?:[sdwc]/o|guardian|relative|father|husband|pita|पिता|पति|"
-                           r"attendant|contact)")
+_RELATIVE_CUE = re.compile(r"(?i)(?:(?<![a-z])(?:[sdwc]/o|guardian|relative|father|husband|pita|"
+                           r"attendant|contact)(?![a-z])|पिता|पति)")
+_WORD = re.compile(r"[A-Za-z]+|[\u0900-\u0963\u0971-\u097f]+")
+_LINE_BREAK = re.compile(r"[\n|]")
+_DOCTOR = re.compile(r"(?:(?<![A-Za-z])(?:Dr|DR|Doctor|DOCTOR)(?![A-Za-z])\.?|डॉक्टर|डॉ\.?|डा\.)"
+                     r"[ \t]*(?:[A-Z]\.[ \t]*)*"
+                     r"(?:(?:[A-Z][A-Za-z]+|[\u0900-\u0963\u0971-\u097f]+)(?:[ \t]+|(?=\W|$))){1,2}"
+                     r"|\(\s*(?:MBBS|MD|MS|DM|DNB|MCh)(?![A-Za-z])[^)\n]*\)"
+                     r"|ASHA(?=[ \t]+(?:worker|कार्यकर्ता))")      # a role, as is a doctor's title
 _ICD = re.compile(r"(?<![A-Za-z0-9\-])([A-TV-Z]\d{2}(?:\.\d{1,2})?)(?![A-Za-z0-9])")
 _ICD_RANGE = re.compile(r"(?<![A-Za-z0-9])([A-Z]\d{2})\s*[-–]\s*([A-Z]\d{2})(?![A-Za-z0-9])")
+# A hospital's or laboratory's own name and town are not the patient's address.
+_FACILITY = re.compile(r"(?i)(?:district hospital[ \t]+[a-z]+|[a-z ]*(?<![a-z])(?:hospital|sadan|"
+                       r"clinic|labs?|pathology|diagnostics)(?![a-z])"
+                       r"(?:[ \t]*[,(][ \t]*[a-z ]+\)?)?)")
 _HOSPITAL_HINTS = {"sanjeevani": "Sanjeevani Multispeciality Hospital",
                    "jeevanjyoti": "Jeevan Jyoti Charitable Hospital",
                    "jeevan jyoti": "Jeevan Jyoti Charitable Hospital",
@@ -84,7 +112,9 @@ _HOSPITAL_HINTS = {"sanjeevani": "Sanjeevani Multispeciality Hospital",
 class Settings:
     rare_cutoff: int = 3
     confident: float = 0.5
+    sure: float = 0.9           # a "confident" record (diagnostic only; not published)
     stay_tolerance: int = 0
+    condition_codes: bool = False   # also match ICD codes and non-English disease names
 
 
 @dataclass
@@ -134,7 +164,6 @@ class Attacker:
     def __init__(self, toolkit: Path, truth_path: Path, settings: Settings = Settings()) -> None:
         self.settings = settings
         self.lexicon = Lexicon.load()
-        self.veto = Veto(self.lexicon)
         folder = truth_path.parent.parent / "attacker"
         self.people: dict[str, Person] = {}
         with open(folder / "registry.csv", encoding="utf-8") as handle:
@@ -145,15 +174,24 @@ class Attacker:
                     int(row["age"]), row["house_no"], place_key(row["village"]),
                     place_key(row["tehsil"]), place_key(row["district"]), row["pin"],
                     row["phone"], row["email"].casefold(), row["aadhaar_last4"])
-        with open(folder / "registry.csv", encoding="utf-8") as handle:
-            self.name_words = {self.lexicon.canonical(w) for row in csv.DictReader(handle)
-                               for column in ("name", "relative_name")
-                               for w in row[column].split()}
+        self.name_keys = {key for p in self.people.values() for key in p.name + p.relative}
         self.places = {kind: {getattr(p, kind) for p in self.people.values()}
                        for kind in ("district", "tehsil", "village")}
+        with open(folder / "registry.csv", encoding="utf-8") as handle:
+            rows = list(csv.DictReader(handle))
+        self.name_words = {w.casefold() for row in rows for column in ("name", "relative_name")
+                           for w in row[column].split()}
+        self.spellings = {kind: {"".join(row[kind].split()).casefold(): place_key(row[kind])
+                                 for row in rows}
+                          for kind in ("district", "tehsil", "village")}
+        self._name_cache: dict[str, str] = {}
+        self._place_cache: dict[str, tuple[str, str] | None] = {}
         self.facts = [json.loads(line) for line in
                       (folder / "known_facts.jsonl").read_text(encoding="utf-8").splitlines()
                       if line.strip()]
+        # the hospitals the attacker can name: the practice ones and any a fact mentions
+        self.hospital_hints = {**_HOSPITAL_HINTS, **{f["hospital"].casefold(): f["hospital"]
+                                                     for f in self.facts if f.get("hospital")}}
         self.truth_path = truth_path
         self.raw = Release(truth_path, None)
         self.conditions = self._vocabulary()
@@ -179,7 +217,9 @@ class Attacker:
         for name, code in names.items():
             low = norm(name)
             out[low] = code
-            short = re.sub(r"^unspecified ", "", low.split(",")[0].split(" (")[0])
+            # only a closing bracket is an aside: "essential (primary) hypertension" has no
+            # shorter name, and "essential" alone names no disease
+            short = re.sub(r"^unspecified |\s*\([^()]*\)$", "", low.split(",")[0])
             if len(short) > 4:
                 out.setdefault(short, code)
         return out
@@ -188,12 +228,13 @@ class Attacker:
         text = TextView.of(with_payloads(text)).text
         low = text.casefold()
         found = Evidence()
-        found.phones = {re.sub(r"\D", "", m.group(1))[-10:] for m in _PHONE.finditer(text)
+        numbers = _UUID.sub(" ", text)
+        found.phones = {re.sub(r"\D", "", m.group(1))[-10:] for m in _PHONE.finditer(numbers)
                         if len(re.sub(r"\D", "", m.group(1))) == 10}
-        found.masked = {m.group(1) for m in _MASKED_PHONE.finditer(text)}
+        found.masked = {m.group(1) for m in _MASKED_PHONE.finditer(numbers)}
         found.emails = {m.group(0).casefold() for m in _EMAIL.finditer(text)}
-        found.last4 = {m.group(1) for m in _LAST4.finditer(text)} \
-            | {m.group(1) for m in _AADHAAR.finditer(text)}
+        found.last4 = {m.group(1) for m in _LAST4.finditer(numbers)} \
+            | {m.group(1) for m in _AADHAAR.finditer(numbers)}
         male, female = bool(_MALE.search(text)), bool(_FEMALE.search(text))
         if male != female:
             found.genders = {"M" if male else "F"}
@@ -209,10 +250,16 @@ class Attacker:
                 if a <= b <= 120:
                     found.ages.add((a, b))
         for m in _BIRTH.finditer(text):
+            if len(m.group(1)) == 4:                # only the year was released
+                found.births.add(int(m.group(1)))
             for match in find_dates(m.group(1), typed=True):
                 value = match.resolve(order)
                 if value:
                     found.births.add(value.year)
+        for m in _AGE_INTERVAL.finditer(text):
+            a, b = int(m.group(1)), int(m.group(2)) - 1
+            if 0 <= a <= b <= 120:
+                found.ages.add((a, b))
         for kind, pattern in _LABELLED.items():
             target = getattr(found, kind + "s")
             for m in pattern.finditer(text):
@@ -222,39 +269,114 @@ class Attacker:
                     if key in self.places[kind]:
                         target.add(key)
                         break
+        self._gazetteer(text, found)
         found.pins = {m.group(1) for m in _PIN.finditer(text)} \
             | {m.group(1) for m in _PIN_MASKED.finditer(text)}
         found.houses = {m.group(1) for m in _HOUSE.finditer(text)}
         self._names(text, found)
-        found.conditions = {m.group(1) for m in _ICD.finditer(text)}
-        found.conditions |= {(m.group(1), m.group(2)) for m in _ICD_RANGE.finditer(text)}
+        codes = self.settings.condition_codes
+        if codes:
+            found.conditions = {m.group(1) for m in _ICD.finditer(text)}
+            found.conditions |= {(m.group(1), m.group(2)) for m in _ICD_RANGE.finditer(text)}
         for name, code in self.conditions.items():
-            if name in low:
+            if (codes or name.isascii()) and name in low:
                 found.conditions.add(code)
         hint = low + " " + context.casefold()
-        found.hospitals = {full for key, full in _HOSPITAL_HINTS.items() if key in hint}
+        found.hospitals = {full for key, full in self.hospital_hints.items() if key in hint}
         for match in find_dates(text, typed=True):
             value = match.resolve(order, REFERENCE_YEAR)
-            if value and value.year >= 2020:
+            if value:
                 found.dates.add(value)
         ordered = sorted(found.dates)
-        found.stays = {(b - a).days for i, a in enumerate(ordered) for b in ordered[i + 1:]
-                       if 0 < (b - a).days <= 120}
+        found.stays = {(b - a).days for i, a in enumerate(ordered) for b in ordered[i + 1:]}
         return found
 
+    def _gazetteer(self, text: str, found: Evidence) -> None:
+        """District and village names wherever they stand, in either script.
+
+        A name that is also a district or tehsil is not guessed to be anything narrower
+        without its label, and a hospital's name or town is skipped.
+        """
+        own = [m.span() for m in _FACILITY.finditer(text)]
+        words = list(_WORD.finditer(text))
+        index = 0
+        while index < len(words):
+            for count in (3, 2, 1):
+                run = words[index:index + count]
+                if len(run) < count or any(
+                        text[a.end():b.start()] not in (" ", "-")
+                        for a, b in zip(run, run[1:], strict=False)):
+                    continue
+                if not all(w.group()[0].isupper() or w.group()[0] > "\u0900" for w in run):
+                    continue
+                key = self._place(" ".join(w.group() for w in run))
+                if key is None or any(a <= run[0].start() < b for a, b in own):
+                    continue
+                kind, value = key
+                getattr(found, kind + "s").add(value)
+                index += count - 1
+                break
+            index += 1
+
+    def _place(self, name: str) -> tuple[str, str] | None:
+        cached = self._place_cache.get(name, False)
+        if cached is False:
+            spelled = "".join(name.split()).casefold()
+            cached = None
+            if name[0] > "\u0900":
+                key = place_key(name)
+                for kind in ("district", "tehsil", "village"):
+                    if key in self.places[kind]:
+                        if kind != "tehsil":
+                            cached = (kind, key)
+                        break
+            else:                       # Latin: the gazetteer spelling, not a sound-alike
+                for kind in ("district", "tehsil", "village"):
+                    if spelled in self.spellings[kind]:
+                        if kind != "tehsil":
+                            cached = (kind, self.spellings[kind][spelled])
+                        break
+            self._place_cache[name] = cached
+        return cached
+
     def _names(self, text: str, found: Evidence) -> None:
-        tokens = Tokens(text, self.lexicon)
-        doctors = self.veto._person_spans(text, tokens)
+        """Every word that sounds like a registry name, in either script.
+
+        The attacker holds the registry, so a name that is also an everyday word is still
+        looked up. Doctors after "Dr." are skipped, and the words just after a relative cue
+        count as a relative's name.
+        """
+        doctors = [m.span() for m in _DOCTOR.finditer(text)]
         cues = [m.end() for m in _RELATIVE_CUE.finditer(text)]
-        for index, token in enumerate(tokens.items):
-            if not tokens.is_candidate(index) \
-                    or any(a <= token.start < b for a, b in doctors):
+        for m in _WORD.finditer(text):
+            word = m.group()
+            latin = word[0] < "\u0900"
+            if len(word) < 2 or (latin and not word[0].isupper()) \
+                    or any(a <= m.start() < b for a, b in doctors):
                 continue
-            if not token.deva and self.lexicon.canonical(token.text) not in self.name_words:
+            key = self._name_cache.get(word)
+            if key is None:
+                key = self._name_cache[word] = self._name(word)
+            if not key:
                 continue
-            key = self.lexicon.name_key(token.text)
-            relative = any(0 <= token.start - c <= 30 for c in cues)
+            relative = any(0 <= m.start() - c <= 30
+                           and not _LINE_BREAK.search(text, c, m.start()) for c in cues)
             (found.relatives if relative else found.names).add(key)
+
+    def _name(self, word: str) -> str:
+        """The registry sound of ``word``, or "".
+
+        A word spelled as in the registry always counts. A sound-alike counts only when it
+        is long enough to carry a sound of its own and is not an everyday or medical word
+        ("Rx" and "Kin" are no one's name).
+        """
+        key = self.lexicon.name_key(word)
+        if key not in self.name_keys:
+            return ""
+        if word.casefold() in self.name_words \
+                or (len(word) > 3 and not self.lexicon.is_stopword(word)):
+            return key
+        return ""
 
     # ------------------------------------------------------------------- linking
 
@@ -328,8 +450,11 @@ class Attacker:
             if not text.strip():
                 continue
             order = MDY if spec.get("date_hint") == "mdy" else DMY
-            context = rel + " " + release.whole(rel, spec)[:600]
+            # the attacker sees the released file's name, not the one it had in the input
+            shown = rel if release.output is None else release.exported[spec["sha256"]]
+            context = shown + " " + release.whole(rel, spec)[:600]
             out.append({"key": (rel, loc), "patient": unit.get("patient"), "text": text,
+                        "references": _references(loc, parsed),
                         "evidence": self.extract(text, order, context)})
         return out
 
@@ -344,15 +469,16 @@ class Attacker:
 
         first: dict[str, int] = {}
         for index, record in enumerate(records):
-            keys = _PSEUDONYM.findall(record["text"]) + _REFERENCE_ID.findall(record["text"])
+            keys = _PSEUDONYM.findall(record["text"]) + record["references"]
             for key in keys:
                 if key in first:
                     parent[find(index)] = find(first[key])
                 else:
                     first[key] = index
         groups: dict[int, list[int]] = defaultdict(list)
-        for index in range(len(records)):
-            groups[find(index)].append(index)
+        for index, record in enumerate(records):
+            if record["patient"]:           # the records attacked are the patients' records
+                groups[find(index)].append(index)
         out = []
         for members in groups.values():
             evidence = Evidence()
@@ -363,23 +489,37 @@ class Attacker:
                         "patient": owners.most_common(1)[0][0] if owners else None})
         return out
 
-    def linkage(self, records: list[dict], profiles: list[dict]) -> tuple[float, float]:
-        """A2/A3 mean probability on the true person, and A4 share re-identified."""
-        per_record = []
+    def linkage(self, records: list[dict], profiles: list[dict]) -> dict[str, float]:
+        """A2/A3 and A4, from each patient record's own evidence and its profile's.
+
+        A record's risk is the larger of the two probabilities on the true person (the A4
+        rule); ``linkage_record_only`` leaves the profiles out, for comparison.
+        """
+        pooled = {}
+        for profile in profiles:
+            found = self.link(profile["evidence"])
+            pooled.update(dict.fromkeys(profile["members"], found))
+        alone, risks = [], []
+        unique = 0
         identified: dict[str, bool] = defaultdict(bool)
-        pooled = {i: self.link(p["evidence"]) for p in profiles for i in p["members"][:1]}
-        by_member = {i: pooled[p["members"][0]] for p in profiles for i in p["members"]}
         for index, record in enumerate(records):
             patient = record["patient"]
             if not patient:
                 continue
             rid = self.rid_of[patient]
-            own = self.link(record["evidence"]).get(rid, 0.0)
-            per_record.append(own)
-            identified[patient] |= \
-                max(own, by_member[index].get(rid, 0.0)) >= self.settings.confident
-        record_risk = sum(per_record) / max(len(per_record), 1)
-        return record_risk, sum(identified.values()) / max(len(identified), 1)
+            own, joined = self.link(record["evidence"]), pooled[index]
+            risk = max(own.get(rid, 0.0), joined.get(rid, 0.0))
+            alone.append(own.get(rid, 0.0))
+            risks.append(risk)
+            unique += any(len(found) == 1 and rid in found for found in (own, joined))
+            identified[patient] |= risk >= self.settings.confident
+        count = max(len(risks), 1)
+        return {"A2/A3": sum(risks) / count,
+                "A4": sum(identified.values()) / max(len(identified), 1),
+                "records_attacked": len(risks), "patients_present": len(identified),
+                "linkage_record_only": sum(alone) / count,
+                "unique_records": unique / count,
+                "confident_records": sum(r >= self.settings.sure for r in risks) / count}
 
     def _recover_shift(self, profiles: list[dict]) -> int:
         facts = defaultdict(set)
@@ -397,8 +537,15 @@ class Attacker:
         agreed = [(len(v), -abs(k), k) for k, v in votes.items() if len(v) >= 2]
         return max(agreed)[2] if agreed else 0
 
-    def targeted(self, profiles: list[dict]) -> tuple[float, int, int, Counter]:
-        """A5: mean success against targeted patients, recovered shift and decoy claims."""
+    def targeted(self, profiles: list[dict], ignore: frozenset = frozenset(),
+                 trace: list | None = None) -> tuple[float, int, int, Counter]:
+        """A5: mean success against targeted patients, recovered shift, decoy claims, hits.
+
+        ``ignore`` leaves signals ("date", "condition", "stay", "hospital") out, to see
+        what each one is worth. ``trace`` receives one entry per targeted patient: which
+        signals the fact holds, how many profiles are consistent with the person, and for
+        each matching profile its signals, its share of the weight and whether it is right.
+        """
         import datetime as dt
 
         shift = self._recover_shift(profiles)
@@ -409,33 +556,39 @@ class Attacker:
             if code:
                 matching[code] = sum(_has_condition(p["evidence"], code) for p in profiles)
         successes, decoys = [], 0
-        survivors: dict[int, set] = {}
+        survivors = [set(self.link(p["evidence"])) for p in profiles]
         hits: Counter = Counter()
         for fact in self.facts:
             rid, person = fact["rid"], self.people.get(fact["rid"])
             code = self._code(fact)
             visits = _dates(fact["visit_dates"])
             weights = {}
+            matched = {}
+            consistent = 0
             for number, profile in enumerate(profiles):
-                if number not in survivors:
-                    survivors[number] = set(self.link(profile["evidence"]))
+                if person is None or rid not in survivors[number]:
+                    continue
+                consistent += 1
                 e = profile["evidence"]
-                score = 0.0
+                signals = []
                 if visits & {d - dt.timedelta(days=shift) for d in e.dates}:
-                    score += 1
-                    hits["date"] += 1
+                    signals.append("date")
                 if code and _has_condition(e, code):
-                    score += 8 if matching[code] <= self.settings.rare_cutoff else 1
-                    hits["condition"] += 1
+                    signals.append("condition")
                 stay = fact.get("stay_days")
                 if stay is not None and any(abs(s - stay) <= self.settings.stay_tolerance
                                             for s in e.stays):
-                    score += 1
-                    hits["stay"] += 1
-                if not score or person is None or rid not in survivors[number]:
+                    signals.append("stay")
+                signals = [s for s in signals if s not in ignore]
+                if not signals:
                     continue
-                if fact.get("hospital") in e.hospitals:
+                hits.update(signals)
+                score = sum(8 if s == "condition" and matching[code] <= self.settings.rare_cutoff
+                            else 1 for s in signals)
+                if "hospital" not in ignore and fact.get("hospital") in e.hospitals:
                     score *= 2
+                    signals.append("hospital")
+                matched[number] = signals
                 weights[number] = score * self._multiplier(e, person)
             total = sum(weights.values())
             patient = patient_of.get(rid)
@@ -444,6 +597,16 @@ class Attacker:
                 continue
             successes.append(sum(w for n, w in weights.items()
                                  if profiles[n]["patient"] == patient) / total if total else 0.0)
+            if trace is not None:
+                holds = [name for name, key in (("date", "visit_dates"), ("stay", "stay_days"),
+                                                ("condition", "condition_hint"),
+                                                ("hospital", "hospital")) if fact.get(key)]
+                trace.append({
+                    "holds": holds, "consistent": consistent, "success": successes[-1],
+                    "rare": bool(code) and matching[code] <= self.settings.rare_cutoff,
+                    "matches": [{"signals": matched[n], "share": w / total,
+                                 "right": profiles[n]["patient"] == patient}
+                                for n, w in weights.items()]})
         return sum(successes) / max(len(successes), 1), shift, decoys, hits
 
     def _code(self, fact: dict) -> str | None:
@@ -465,6 +628,14 @@ class Attacker:
             if path.is_file():
                 parts.append(path.read_text(encoding="utf-8", errors="replace"))
         everything = norm(with_payloads("\n".join(parts)))
+        seen: dict[tuple[str, bool], int] = {}
+
+        def overall(key: str, digits: bool) -> int:     # the same key recurs in many records
+            if (key, digits) not in seen:
+                seen[key, digits] = occurrences(key, everything, digits) \
+                    - occurrences(key, allowed_anywhere, digits)
+            return seen[key, digits]
+
         allowed_anywhere = norm(" ".join(p["text"] for *_, u in release.units()
                                          for p in u.get("preserve") or []))
         exposed, patients = set(), set()
@@ -487,9 +658,7 @@ class Attacker:
                                 for k, d in keys)
                 long_keys = all(len(k) >= (8 if d else 5) for k, d in keys) \
                     and (full_name or all(d for _, d in keys))
-                anywhere = long_keys and all(
-                    occurrences(k, everything, d) > occurrences(k, allowed_anywhere, d)
-                    for k, d in keys)
+                anywhere = long_keys and all(overall(k, d) > 0 for k, d in keys)
                 if in_record or anywhere:
                     exposed.add(patient)
         return len(exposed) / max(len(patients), 1)
@@ -536,11 +705,38 @@ class Attacker:
     def measure(self, release: Release) -> dict:
         records = self.records(release)
         profiles = self.profiles(records)
-        record_risk, profile_risk = self.linkage(records, profiles)
-        success, shift, decoys, hits = self.targeted(profiles)
-        return {"records": records, "A1": self.exposure(release), "A2/A3": record_risk,
-                "A4": profile_risk, "A5": success, "A6": self.inversion(records),
+        linked = self.linkage(records, profiles)
+        trace: list = []
+        success, shift, decoys, hits = self.targeted(profiles, trace=trace)
+        return {"records": records, "profiles": len(profiles), "A1": self.exposure(release),
+                **linked, "A5": success, "targets": len(trace), "A6": self.inversion(records),
                 "shift": shift, "decoy_claims": decoys, "hits": dict(hits)}
+
+
+def _references(loc: str, parsed: object) -> list[str]:
+    """Values of the record's patient-identifier fields; placeholders join nothing."""
+    pairs: list[tuple[str, object]] = []
+    if loc.startswith("row:") and isinstance(parsed, list):
+        index = int(loc[4:]) + 1
+        if index < len(parsed):
+            pairs = list(zip(parsed[0], parsed[index], strict=False))
+    elif parsed is not None and not isinstance(parsed, str):
+        stack = [("", pointer(parsed, loc) if loc.startswith("/") else parsed)]
+        while stack:
+            name, node = stack.pop()
+            if isinstance(node, dict):
+                stack.extend(node.items())
+            elif isinstance(node, list):
+                stack.extend((name, item) for item in node)
+            else:
+                pairs.append((name, node))
+    out = set()
+    for name, value in pairs:
+        value = "" if value is None else str(value).strip()
+        if value and "[" not in value \
+                and _REFERENCE_FIELD.search(re.sub(r"[^a-z]", "", str(name).lower())):
+            out.add("ref:" + value)
+    return sorted(out)
 
 
 def _dates(values: list[str]) -> set:
@@ -594,10 +790,13 @@ def main() -> int:
     ap.add_argument("--rare", type=int, default=3)
     ap.add_argument("--confident", type=float, default=0.5)
     ap.add_argument("--stay-tolerance", type=int, default=0)
+    ap.add_argument("--codes", action="store_true",
+                    help="also match conditions by ICD code and non-English name")
     args = ap.parse_args()
     truth = Path(args.truth) if args.truth else default_truth(args.toolkit)
     result = attack(truth, Path(args.output), Path(args.other) if args.other else None,
-                    Settings(args.rare, args.confident, args.stay_tolerance))
+                    Settings(args.rare, args.confident, stay_tolerance=args.stay_tolerance,
+                             condition_codes=args.codes))
     print("attack      raw input   release   release / raw")
     for name, value in result["risks"].items():
         raw = result["raw"].get(name)

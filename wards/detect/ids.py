@@ -7,6 +7,7 @@ import unicodedata
 
 from wards.model import EntityType as E
 from wards.model import Mention
+from wards.numbers import foreign_number, label_words, personal_label, reads_as_other, words_before
 
 
 def _compile(pattern: str, flags: int = 0) -> re.Pattern[str]:
@@ -87,6 +88,53 @@ def _digit_count(value: str) -> int:
     return sum(ch.isdigit() for ch in value)
 
 
+# --------------------------------------------------------- numbers under any label
+
+# Mention.data of a hospital or reference number found by the generic rules below, so that
+# the dataset pass (wards.anchors) can check that it belongs to one person.
+NUMBER_LABEL = "number-label"
+
+
+# A label ending in a number word, whatever comes before it: "Indoor Reg. No.:- 26/K/417".
+_NUMBER_WORD = (r"(?:(?<![A-Za-z])(?:No|Nos|Num|Number|Nbr|ID|Regn|Reg|Registration)(?![A-Za-z])\.?"
+                r"|(?:सं|संख्या|नं|क्रमांक)(?![\u0900-\u097f])\.?|#)")
+_NUMBERED = _compile(
+    rf"(?P<marker>{_NUMBER_WORD}(?:[ \t]*{_NUMBER_WORD})*)"
+    r"[ \t]*(?:(?::-|[:#=\-–—])[ \t]*){0,2}"
+    r"(?P<id>(?:[A-Z]{1,6}[ ](?=\d))?[A-Za-z0-9]+(?:[/\-_.\\][A-Za-z0-9]+){0,6})(?![A-Za-z0-9])",
+    re.IGNORECASE)
+# A number that carries its own label as a prefix: "IP/26/0417", "UHID-004417".
+_PREFIXED = _compile(
+    r"(?<![A-Za-z0-9/\-_.])(?:IPD|IP|UHID|MRN|MRD|CRN)(?:[\-/](?:[A-Z]{1,4}[\-/])?\d{1,6}){0,2}"
+    r"[\-/](?!(?:19|20)\d\d(?![\-/\d]))\d{3,8}(?![A-Za-z0-9]|[\-/.]\d)")
+
+
+_UNIT_AFTER = re.compile(r"[ \t]*(?:(?:mg|mcg|ml|gm|kg|iu|units?|mmhg|bpm)(?![A-Za-z])|%|/cumm"
+                         r"|g/dl|mg/dl)", re.IGNORECASE)
+
+
+def _numbered(text: str) -> list[tuple[E, int, int]]:
+    """Identifiers after any label that ends in a number word."""
+    found = []
+    for m in _NUMBERED.finditer(text):
+        marker, value = m.group("marker"), m.group("id")
+        # "no 250 mg" is a negation, not a label: a bare lower-case word needs "." or ":"
+        if marker in ("no", "num", "id", "reg") \
+                and not text[m.end("marker"):m.start("id")].strip().startswith((":", "#")):
+            continue
+        if _digit_count(value) < 3 or reads_as_other(value) or _UNIT_AFTER.match(text, m.end()):
+            continue
+        words = words_before(text, m.start()) + label_words(marker)
+        if foreign_number(words):
+            continue
+        if personal_label(words):
+            found.append((E.MRN, m.start("id"), m.end("id")))
+        # an unknown kind of number is removed only when it is shaped like an identifier
+        elif _digit_count(value) >= 5 or not value.isdigit():
+            found.append((E.OTHER_ID, m.start("id"), m.end("id")))
+    return found
+
+
 def detect_ids(text: str) -> list[Mention]:
     """Identifier mentions in view text. Overlaps are resolved by the caller."""
     found: list[Mention] = []
@@ -114,4 +162,10 @@ def detect_ids(text: str) -> list[Mention]:
             add(E.AADHAAR, m.start("id"), m.end("id"), 84, "label")
         for m in _PHONE_LABEL.finditer(text):
             add(E.PHONE, m.start("id"), m.end("id"), 81, "label")
+        # last and weakest, so that every more specific rule above names the value first
+        for etype, start, end in _numbered(text):
+            add(etype, start, end, 80 if etype is E.MRN else 59, "label")
+            found[-1].data = NUMBER_LABEL
+        for m in _PREFIXED.finditer(text):
+            add(E.MRN, m.start(), m.end(), 90, "pattern")
     return found

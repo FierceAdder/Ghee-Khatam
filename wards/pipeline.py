@@ -20,7 +20,7 @@ from collections import Counter, defaultdict
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from wards import dates, documents, ingest, logschema, validate, write
+from wards import crypto, dates, documents, ingest, logschema, validate, write
 from wards.audit import Auditor
 from wards.clinical import ConditionPlan
 from wards.detect import Detector, resolve
@@ -37,7 +37,7 @@ from wards.model import FieldType as F
 from wards.policy import Policy
 from wards.privacy import Privacy
 from wards.redact import PatientContext, Redactor
-from wards.release import Release
+from wards.release import QUARANTINE_NAME, Release
 from wards.security import SafeLog, Secret, Terminated
 from wards.sweep import NameBag, NameSweeper
 
@@ -92,30 +92,40 @@ class Pipeline:
         self.name_model = _load_name_model(policy.name_model, self.lexicon)
         self.model_skipped = 0
         self._repairs: dict[int, int] = {}
+        self._unclaimed: set[str] = set()    # record keys grouped but not reported as linked
         self._stage_started = 0.0
 
     # ------------------------------------------------------------------- driver
 
-    def run(self, input_dir: Path, output_dir: Path) -> RunResult:
+    def run(self, input_dir: Path, output_dir: Path, sealed: bool = False,
+            keep_quarantine: bool = False) -> RunResult:
+        """``sealed``: the input folder was made by tools/seal.py. ``keep_quarantine``:
+        keep an encrypted copy of every quarantined file in ``<output>/quarantine``."""
         started = time.monotonic()
         input_dir, output_dir = _check_paths(input_dir, output_dir)
-        release = Release(output_dir)
+        if keep_quarantine and _has_content(output_dir / QUARANTINE_NAME):
+            raise ConfigError("output_already_has_results")
+        # a wrong secret or a damaged archive is refused before anything is written
+        source = crypto.Archive.open(input_dir, self.secret) if sealed else input_dir
+        release = Release(output_dir, self.secret)
         self._stage_started = started
         states: list[FileState] = []
         reserve = bytearray(_RESERVE_BYTES)
         try:
             release.open()
-            return self._run(input_dir, release, states, started)
+            return self._run(source, release, states, started, keep_quarantine)
         except BaseException as error:
             del reserve
             release.abort()
             self._report_failure(output_dir, states, time.monotonic() - started, error)
             raise
+        finally:
+            release.close()              # no staged or half-written file on any way out
 
-    def _run(self, input_dir: Path, release: Release, states: list[FileState],
-             started: float) -> RunResult:
-        for path in ingest.list_files(input_dir):
-            states.append(FileState(ingest.read_file(path, input_dir, self.policy)))
+    def _run(self, source: Path | crypto.Archive, release: Release, states: list[FileState],
+             started: float, keep_quarantine: bool) -> RunResult:
+        for item in crypto.read_input(source, self.policy):
+            states.append(FileState(item))
         for state in states:
             state.reason = state.item.reason
         self.log.record("run_started", files=len(states), policy=_digest(self.policy))
@@ -163,6 +173,10 @@ class Pipeline:
         self._stage_done("names", states)
         self._each(states, "stage", lambda s: self._stage(s, release, auditor))
         self._stage_done("stage", states)
+        if keep_quarantine:
+            kept = release.keep_quarantined(
+                self.secret, source, [(s.item, s.reason) for s in states if not s.alive])
+            self.log.record("quarantine_encrypted", files=kept)
 
         result = self._report(states, redactor, auditor, time.monotonic() - started)
         if self.name_model is not None:
@@ -386,19 +400,25 @@ class Pipeline:
                 evidence.append(self.linker.evidence(record, state.order, reference_year))
                 orders.append(state.order)
         assigned = self.linker.link(evidence)
+        # Who a record is about, for names, ages and the date shift: the patient, else the
+        # group it forms with other records of its file, else the record itself.
+        local = {evidence[i].record.key: key for i, key in self.linker.local.items()}
+        people = [assigned.get(i) or local.get(item.record.key) or item.record.key
+                  for i, item in enumerate(evidence)]
+        self._unclaimed = {evidence[i].record.key for i in self.linker.unclaimed}
 
         sweeper = NameSweeper(self.lexicon)
         bags: dict[str, NameBag] = {}
         oldest: dict[str, int] = defaultdict(int)
         contexts: dict[str, PatientContext] = {}
         births: dict[str, set] = defaultdict(set)
-        for index, item in enumerate(evidence):
-            births[assigned.get(index) or item.record.key].update(item.summary.dobs)
+        for person, item in zip(people, evidence, strict=True):
+            births[person].update(item.summary.dobs)
         for index, item in enumerate(evidence):
             record = item.record
             pseudonym = assigned.get(index)
-            bag_key = pseudonym or record.key
-            bag = bags.setdefault(bag_key, NameBag())
+            person = people[index]
+            bag = bags.setdefault(person, NameBag())
             ages = [reference_year - d.year for d in item.summary.dobs]
             for _, mention in record_names(record, self.lexicon):
                 sweeper.register(mention)
@@ -408,18 +428,22 @@ class Pipeline:
                 if mention.etype is E.AGE and mention.value.isdigit():
                     ages.append(int(mention.value))
             if ages:
-                oldest[bag_key] = max(oldest[bag_key], max(ages))
+                oldest[person] = max(oldest[person], max(ages))
             contexts[record.key] = PatientContext(
                 pseudonym=pseudonym,
-                offset=self.privacy.shift_days(pseudonym or record.key),
+                offset=self.privacy.shift_days(person),
                 order=orders[index], reference_year=reference_year, bag=bag,
                 district=knowledge.record_district(record),
-                birth_dates=frozenset(births[bag_key]),
+                birth_dates=frozenset(births[person]),
                 shift_dates=pseudonym is not None
                 or any(m.etype is not E.DATE for _, m in record.mentions()))
-        for record_key, context in contexts.items():
-            context.top_coded = oldest[context.pseudonym or record_key] \
-                >= self.policy.age_top_code
+        # a local group moves its dates together or not at all
+        moved = {key for record_key, key in local.items()
+                 if contexts[record_key].shift_dates}
+        for person, item in zip(people, evidence, strict=True):
+            context = contexts[item.record.key]
+            context.shift_dates |= local.get(item.record.key) in moved
+            context.top_coded = oldest[person] >= self.policy.age_top_code
         self._demographics = _demographics(evidence, assigned, contexts)
         return contexts, sweeper
 
@@ -447,6 +471,8 @@ class Pipeline:
                 if personal:         # documents about nobody keep their medical content
                     self._merge(segment, conditions.mentions(segment))
             redactor.record(record, context)
+            if record.key in self._unclaimed:
+                record.patient = None     # written in the text, but not claimed as a link
         # File-level values belong to no patient: dates stay, but a birth date has no
         # offset to hide behind, so it is always removed.
         loose = PatientContext(pseudonym=None, offset=0, order=state.order,
@@ -460,8 +486,8 @@ class Pipeline:
     def _stage(self, state: FileState, release: Release, auditor: Auditor) -> None:
         """Write one file to the stage, read it back and refuse it if anything is wrong."""
         try:
-            path = release.add(state.output, write.serialize(state.doc))
-            written = self._reread(state.doc, path.read_bytes().decode("utf-8"))
+            release.add(state.output, write.serialize(state.doc))     # ciphertext on disk
+            written = self._reread(state.doc, release.read(state.output))
             faults = validate.problems(state.doc, written)
             if auditor.leaks(written):
                 faults.insert(0, "self_scan_failed")     # the graver of the faults
@@ -619,6 +645,8 @@ def _failure_reason(error: BaseException) -> str:
         return "interrupted"
     if isinstance(error, MemoryError):
         return "out_of_memory"
+    if isinstance(error, crypto.IntegrityError):
+        return "integrity_check_failed"
     return "run_failed"
 
 
@@ -638,6 +666,12 @@ def _check_paths(input_dir: Path, output_dir: Path) -> tuple[Path, Path]:
     if (stale.is_dir() and any(stale.iterdir())) or (target / "report.json").exists():
         raise ConfigError("output_already_has_results")
     return source, target
+
+
+def _has_content(path: Path) -> bool:
+    if path.is_symlink() or path.is_file():
+        return True
+    return path.is_dir() and any(path.iterdir())
 
 
 def peak_rss_mb() -> float:
