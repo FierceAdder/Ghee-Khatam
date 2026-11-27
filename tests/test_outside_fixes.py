@@ -54,3 +54,37 @@ def test_times_ratios_pressures_and_dates_are_not_taken_for_numbers(release):
     text = out.text("note.txt")
     for kept in ("10:30", "1:1000", "140/90", "25:11"):
         assert kept in text
+
+
+# ------------------------------------------------------------ degrees after a doctor (G3)
+
+
+@pytest.mark.parametrize(("patient", "doctor"), [
+    ("Anurag Pathak", "Anurag Sehgal"),
+    ("Mohammad Danish", "Danish Qureshi"),
+    ("अनुराग पाठक", "अनुराग सहगल"),
+])
+def test_a_doctor_and_their_degrees_survive_a_shared_given_name(release, patient, doctor):
+    lines = [f"Consultant: Dr. {doctor}, MD, DM (Neurology)",
+             f"Seen by Dr {doctor}, MBBS, MD",
+             f"{doctor}, MD, DM",
+             f"डॉ. {doctor}, एम.डी., डी.एम."]
+    out = release({"a.txt": f"Patient Name: {patient}\nUHID: KMC-100417\n"
+                            + "\n".join(lines) + "\n"})
+    text = out.text("a.txt")
+    assert patient not in text
+    for line in lines:
+        assert line in text
+
+
+@pytest.mark.parametrize("line", [
+    "Patient Name: Md Danish Qureshi",
+    "Patient Name: MD DANISH",
+    "Md. Danish ko aaj bukhar hai",
+    "M.D. Danish Qureshi admitted yesterday",
+    "S/O Md Danish",
+])
+def test_the_short_form_of_a_name_is_not_taken_for_a_degree(release, line):
+    out = release({"a.txt": f"{line}\nUHID: KMC-100417\n",
+                   "reg.csv": table(["Patient Name"], [["Md Danish Qureshi"]])})
+    assert "danish" not in out.text("a.txt").casefold()

@@ -37,6 +37,24 @@ _QUALIFICATION = _compile(
     r"\([ \t]*" + _DEGREE + r"(?![A-Za-z])[^)\n]{0,60}\)"
     r"|(?<![A-Za-z])" + _DEGREE + r"(?=[ \t]+(?:Medicine|Surgery|General|Gen|Pediatrics|Paediatrics|"
     r"Pathology|Pulmonary|Obstetrics|Orthopaedics|Orthopedics|Radiology|Anaesthesia))")
+# A degree written as a degree: two or more together, one no name is spelt like, or one set
+# off after a name. "Md Danish" is none of these.
+_ONLY_DEGREE = (r"(?:MBBS|M\.B\.B\.S\.?|M\.D(?!\.?[ \t]*[A-Z][a-z])\.?|D\.M\.|MCh|M\.Ch\.?|DNB|DGO|DCH|FRCS|MRCP|PhD|Ph\.D\.?|"
+                r"एम\.[ \t]?बी\.[ \t]?बी\.[ \t]?एस\.?|एम\.[ \t]?डी\.?|एम\.[ \t]?एस\.?|डी\.[ \t]?एम\.?)")
+_ANY_DEGREE = rf"(?:{_ONLY_DEGREE}|MD|MS|DM|MDS|BDS|BAMS|BHMS|DPM|DCP)"
+_EDGE = r"(?<![A-Za-z\u0900-\u097f])"
+_END = r"(?![A-Za-z\u0900-\u097f])"
+_LISTED = r"[ \t]*[,/&][ \t]*|[ \t]+"
+_DEGREES = _compile(
+    rf"{_EDGE}{_ANY_DEGREE}{_END}(?:(?:{_LISTED}){_ANY_DEGREE}{_END})+"
+    rf"|{_EDGE}{_ONLY_DEGREE}{_END}"
+    rf"|(?:(?<=, )|(?<=,)){_ANY_DEGREE}(?=[ \t]*(?:[,;(|]|\.?[ \t]*$))"
+    rf"|(?:(?<=[a-z] ))(?:MD|DM)(?=[ \t]*(?:[,;(|]|\.?[ \t]*$))", re.MULTILINE)
+_NAME_WORD = r"(?:[A-Z][A-Za-z'\-]*\.?|[\u0900-\u0963\u0971-\u097f]+\.?)"
+# The person those degrees belong to, with or without "Dr.".
+_DEGREE_HOLDER = _compile(
+    rf"{_EDGE}{_NAME_WORD}(?:[ \t]{_NAME_WORD}){{0,3}}[ \t]*,?[ \t]*(?=(?:{_ONLY_DEGREE}{_END}"
+    rf"|{_ANY_DEGREE}{_END}(?:{_LISTED}){_ANY_DEGREE}{_END}))")
 _EPONYM = re.compile(
     r"(?<![A-Za-z])[A-Z][a-z]+(?:[\- ][A-Z][a-z]+)?(?:['’]s)?[ \t]+"
     r"(?i:disease|syndrome|palsy|lymphoma|sarcoma|thyroiditis|contracture|chorea|an[ae]emia|"
@@ -82,7 +100,7 @@ class Veto:
 
     def _place_spans(self, text: str) -> list[tuple[int, int]]:
         """Facility and landmark names ("Shanti Memorial Hospital")."""
-        spans = []
+        spans = [m.span() for m in _DEGREE_HOLDER.finditer(text)]
         for pattern in (_FACILITY_WORD, _PLACE_WORD):
             for m in pattern.finditer(text):
                 start = m.start()
@@ -107,7 +125,7 @@ class Veto:
                     run = self._doctor_run(tokens, index)
                     if run:
                         spans.append((m.start(), tokens[run[-1]].end))
-        for pattern in (_EPONYM, _ASHA, _ABHA_LABEL, _QUALIFICATION):
+        for pattern in (_EPONYM, _ASHA, _ABHA_LABEL, _QUALIFICATION, _DEGREES):
             spans.extend(m.span() for m in pattern.finditer(text))
         return spans
 
