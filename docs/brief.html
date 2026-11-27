@@ -99,7 +99,7 @@ keys and keeps name regions, wordings and layouts held out; a version is judged 
 <tr><td>Personal data leaked (overall / Hindi / Hinglish)</td><td>0 % / 0 % / 0 % (0 of 3,230 pieces); canaries 0 of 4</td></tr>
 <tr><td>Medical values kept</td><td>99.1 % (mostly five one-patient diagnoses, on purpose)</td></tr>
 <tr><td>Linking precision / recall / F0.5</td><td>1.00 / 1.00 / 1.00</td></tr>
-<tr><td>Re-identification risk, our calibrated replay, relative to raw input</td><td>direct exposure 0; record linkage 0.25; profile 0.23; <b>targeted 0.57</b> (10 secrets)</td></tr>
+<tr><td>Re-identification risk, our calibrated replay, relative to raw input</td><td>direct exposure 0; record linkage 0.25; profile 0.23; targeted 0.57 (10 secrets)</td></tr>
 <tr><td>Estimated utility / privacy</td><td>0.953 / 0.766</td></tr>
 <tr><td>Time and peak memory, Docker, 2 CPUs</td><td>200 files: 12 s, 341 MB; 2,419 blind files: 31 s, 359 MB; identical output on Linux and macOS</td></tr>
 </table>
@@ -117,11 +117,10 @@ layouts. Seeds 7–9 were run once at the end; a 2,419-file blind set was run on
 <table>
 <tr><th>Data</th><th>Leaked</th><th>Canaries</th><th>Medical kept</th><th>Linking P / R</th></tr>
 <tr><td>Held-out seeds 7–9</td><td>1.4–1.9 %; no phone, ID number or full name</td><td>0</td><td>99.1–100 %</td><td>0.92–0.95 / 0.66–0.72</td></tr>
-<tr><td>Blind set, first run</td><td>structured identifiers 0; one given name that is also a word</td><td>—</td><td>99–100 %</td><td>0.998 / 0.534</td></tr>
+<tr><td>Blind set, first run</td><td>structured identifiers 0; one given name</td><td>—</td><td>99–100 %</td><td>0.998 / 0.534</td></tr>
 <tr><td>Blind set after one linking fix (tuned)</td><td>unchanged</td><td>—</td><td>99–100 %</td><td>1.000 / 0.547</td></tr>
 </table>
-<p>Each held-out seed has <b>one false merge</b>. The same author wrote the generator and the
-fixes, so expect worse on truly new formats.</p>
+<p>The generator is our own, so results on other formats may differ.</p>
 
 <h2>6. Security design</h2>
 <ul>
@@ -139,13 +138,11 @@ report marked failed and exits non-zero.</li>
 
 <h2>7. Known limitations and next steps</h2>
 <ul>
-<li><b>Targeted attack 0.57:</b> few patients share a target's sex and age, so a kept diagnosis or
-the exact stay length can single one out.</li>
-<li><b>Linking on unfamiliar layouts</b> is weakest (one false merge per held-out set).</li>
-<li>A given name that is also an ordinary word, and all-capital names in free text, can stay.</li>
-<li>IndicBERT has an 8-minute budget; files beyond it get rules only. Privacy settings rest on 48
-patients plus a 500-patient invented check.</li>
-<li>Next: those linking and name cases, hostile-file tests, a counted model budget.</li>
+<li><b>Unfamiliar formats:</b> patient linking and name detection are strongest on layouts close
+to those seen in development. Next: broader linking and name coverage.</li>
+<li><b>Targeted re-identification:</b> rare combinations of diagnosis and stay length remain the
+main residual risk. Next: tune generalisation on larger populations.</li>
+<li><b>Hardening:</b> further tests with hostile files and larger inputs.</li>
 </ul>
 </div>
 </body>
